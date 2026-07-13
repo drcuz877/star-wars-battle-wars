@@ -53,6 +53,32 @@ export class BattleScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
+    // Pause: ❚❚ button (tap or click) or ESC / P on keyboard.
+    const pauseButton = this.add
+      .circle(T.arena.width / 2 + 70, 34, 20, 0xffffff, 0.12)
+      .setStrokeStyle(2, 0xffffff, 0.4)
+      .setDepth(50)
+      .setInteractive()
+    this.add
+      .text(T.arena.width / 2 + 70, 34, '❚❚', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setDepth(51)
+      .setAlpha(0.75)
+    pauseButton.on('pointerdown', () => this.pauseGame())
+    this.input.keyboard.on('keydown-ESC', () => this.pauseGame())
+    this.input.keyboard.on('keydown-P', () => this.pauseGame())
+
+    // Build stamp so any device can confirm it's running the latest deploy.
+    this.add.text(24, 92, `build ${__BUILD_TIME__}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '10px',
+      color: '#555577',
+    })
+
     if (!this.touch) {
       const hint = this.add
         .text(
@@ -66,6 +92,12 @@ export class BattleScene extends Phaser.Scene {
     }
 
     this.roundOver = false
+  }
+
+  pauseGame() {
+    if (this.roundOver) return
+    this.scene.launch('Pause')
+    this.scene.pause()
   }
 
   update(_time, delta) {

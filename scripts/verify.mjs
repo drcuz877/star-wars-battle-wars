@@ -189,6 +189,16 @@ try {
   const s5 = await state()
   check('ENTER rematch resets the fight', s5.php === 100 && s5.ehp === 100 && !s5.over)
 
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+  check('ESC pauses the battle', await page.evaluate(() => window.game.scene.isPaused('Battle')))
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+  check(
+    'ESC on the pause menu resumes',
+    await page.evaluate(() => !window.game.scene.isPaused('Battle')),
+  )
+
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   await page.close()
 

@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { TUNING as T } from './combat/tuning.js'
 import { BattleScene } from './scenes/BattleScene.js'
+import { PauseScene } from './scenes/PauseScene.js'
 
 const game = new Phaser.Game({
   type: Phaser.AUTO,
@@ -13,7 +14,7 @@ const game = new Phaser.Game({
     width: T.arena.width,
     height: T.arena.height,
   },
-  scene: [BattleScene],
+  scene: [BattleScene, PauseScene],
 })
 
 // Handle for debugging and automated verification scripts.
