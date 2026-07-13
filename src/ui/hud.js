@@ -15,9 +15,9 @@ export class Hud {
     const originX = left ? 0 : 1
 
     scene.add
-      .text(x, 14, fighter.name, {
+      .text(x, 14, `${fighter.name}${left ? '  (YOU)' : ''}`, {
         fontFamily: 'Arial, sans-serif',
-        fontSize: '18px',
+        fontSize: '17px',
         fontStyle: 'bold',
         color: '#ffffff',
       })
@@ -51,7 +51,7 @@ export class Hud {
   update() {
     const f = this.fighter
 
-    const hpPct = f.hp / T.fighter.maxHp
+    const hpPct = f.hp / f.d.maxHp
     this.healthFill.scaleX = hpPct
     this.healthFill.setFillStyle(hpPct > 0.5 ? 0x3ddc55 : hpPct > 0.25 ? 0xff9f2e : 0xff3b3b)
 

@@ -17,16 +17,24 @@ npm run build && node scripts/verify.mjs
 Serves the production build via `vite preview` on port 4173, drives it in
 headless **system Edge** (`playwright` with `channel: 'msedge'` — no browser
 download needed; PLAYWRIGHT_SKIP_BROWSER_DOWNLOAD=1 was used at install),
-runs ~15 checks (movement, jump, attack, block, S+A chord, special meter,
-KO, rematch, touch buttons), and writes screenshots to `verify-artifacts/`
-(gitignored). Exit 0 = all pass. Read the PNGs to eyeball rendering.
+runs ~23 checks (character select, movement, jump, attack, block, S+A chord,
+special fires + damages, blaster bolts, KO, rematch/change-character menu,
+touch buttons), and writes screenshots to `verify-artifacts/` (gitignored).
+Exit 0 = all pass. Read the PNGs to eyeball rendering.
+
+For balance changes also run `npm run sim` (headless Node duel harness,
+`src/combat/sim.js`) — favorites should usually win (positive OVR/win-rate
+correlation) and Vader should routinely beat Padmé.
 
 ## The state handle
 
-`window.game` is exposed in `src/main.js`. Scene state:
+`window.game` is exposed in `src/main.js`. The game boots into the Select
+scene: `window.game.scene.keys.Select.cards` → `[{id, x, y}]` card centers
+for click/tap-driving the two picks (fighter, then opponent). Battle state:
 `window.game.scene.keys.Battle` → `.player` / `.enemy` (Fighter objects:
-`hp`, `stamina`, `special`, `swinging`, `blocking`, `ko`, `rect.x/y`),
-`.roundOver`, `.timeLeft`, `.touch` (null on non-touch contexts).
+`hp`, `d.maxHp` (per-character), `stamina`, `special`, `swinging`,
+`blocking`, `ko`, `rect.x/y`), `.projectiles.bolts`, `.roundOver`,
+`.timeLeft`, `.touch` (null on non-touch contexts).
 
 ## Gotchas learned the hard way
 

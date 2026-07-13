@@ -16,12 +16,20 @@ export class SparAI {
   read(dtMs, self, opponent) {
     this.clock += dtMs
     const dist = Math.abs(opponent.rect.x - self.rect.x)
-    const inRange = dist < 100
+    // Blaster characters fight from range and kite; melee closes in.
+    const ranged = self.d.ranged
+    const inRange = ranged ? dist < 430 : dist < 100
 
     if (this.clock >= this.nextDecision) {
       this.nextDecision = this.clock + 250 + Math.random() * 350
       const r = Math.random()
-      this.plan = r < 0.55 ? 'approach' : r < 0.78 ? 'idle' : 'retreat'
+      if (ranged) {
+        if (dist < 180) this.plan = r < 0.6 ? 'retreat' : 'idle'
+        else if (dist > 480) this.plan = r < 0.6 ? 'approach' : 'idle'
+        else this.plan = r < 0.25 ? 'approach' : r < 0.75 ? 'idle' : 'retreat'
+      } else {
+        this.plan = r < 0.55 ? 'approach' : r < 0.78 ? 'idle' : 'retreat'
+      }
 
       // Occasionally react to the player's swing by blocking for a moment.
       if (opponent.swinging && Math.random() < 0.25) this.defendUntil = this.clock + 500

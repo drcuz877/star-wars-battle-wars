@@ -1,14 +1,28 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
+import { CHARACTERS } from '../data/characters.js'
 import { Fighter } from '../combat/fighter.js'
+import { Projectiles } from '../combat/projectiles.js'
 import { SparAI } from '../combat/ai.js'
 import { KeyboardControls } from '../input/controls.js'
 import { TouchControls } from '../input/touch.js'
 import { Hud } from '../ui/hud.js'
 
+const byId = (id) => CHARACTERS.find((c) => c.id === id)
+
 export class BattleScene extends Phaser.Scene {
   constructor() {
     super('Battle')
+  }
+
+  // Characters arrive from the select screen; a restart (rematch / pause
+  // menu) passes no data and keeps the previous matchup. Fallback only
+  // matters when jumping straight into Battle (e.g. during development).
+  init(data) {
+    if (data?.p1) this.p1Char = byId(data.p1) ?? this.p1Char
+    if (data?.p2) this.p2Char = byId(data.p2) ?? this.p2Char
+    this.p1Char = this.p1Char ?? byId('luke')
+    this.p2Char = this.p2Char ?? byId('vader')
   }
 
   create() {
@@ -33,8 +47,9 @@ export class BattleScene extends Phaser.Scene {
       0x1c1c2e,
     )
 
-    this.player = new Fighter(this, { x: 300, color: 0x4da6ff, name: 'PLAYER', facing: 1 })
-    this.enemy = new Fighter(this, { x: 660, color: 0xff5555, name: 'OPPONENT', facing: -1 })
+    this.projectiles = new Projectiles(this)
+    this.player = new Fighter(this, { x: 300, character: this.p1Char, facing: 1 })
+    this.enemy = new Fighter(this, { x: 660, character: this.p2Char, facing: -1 })
     this.physics.add.collider(this.player.rect, this.enemy.rect)
 
     this.keyboard = new KeyboardControls(this)
@@ -94,6 +109,10 @@ export class BattleScene extends Phaser.Scene {
     this.roundOver = false
   }
 
+  opponentOf(fighter) {
+    return fighter === this.player ? this.enemy : this.player
+  }
+
   pauseGame() {
     if (this.roundOver) return
     this.scene.launch('Pause')
@@ -115,6 +134,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.resolveHits(this.player, this.enemy)
     this.resolveHits(this.enemy, this.player)
+    this.projectiles.update(delta, [this.player, this.enemy])
 
     this.huds.forEach((hud) => hud.update())
     if (this.touch) this.touch.setSpecialReady(this.player.specialReady)
@@ -139,38 +159,28 @@ export class BattleScene extends Phaser.Scene {
     }
   }
 
+  // Normal melee swings. Bolts resolve in Projectiles, specials in
+  // specials.js — every path lands through Fighter.applyHit.
   resolveHits(attacker, defender) {
     if (!attacker.hitboxActive() || defender.ko) return
     if (!Phaser.Geom.Rectangle.Overlaps(attacker.hitbox(), defender.rect.getBounds())) return
 
     attacker.swingLanded = true
-    const result = defender.takeHit(attacker, attacker.swingIsSpecial)
-
-    this.cameras.main.shake(
-      attacker.swingIsSpecial ? 180 : 60,
-      attacker.swingIsSpecial ? 0.01 : 0.004,
-    )
-
-    const popup = this.add
-      .text(defender.rect.x, defender.rect.y - 60, `${result.damage}`, {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '20px',
-        fontStyle: 'bold',
-        color: result.blocked ? '#8ab4ff' : '#ffffff',
-      })
-      .setOrigin(0.5)
-    this.tweens.add({
-      targets: popup,
-      y: popup.y - 34,
-      alpha: 0,
-      duration: 600,
-      onComplete: () => popup.destroy(),
+    defender.applyHit({
+      attacker,
+      damage: attacker.d.damage,
+      knockback: attacker.d.knockback,
+      hitstunMs: T.attack.hitstunMs,
+      melee: true,
     })
   }
 
+  // Health bars differ in size now, so timeout compares remaining percent.
   timeoutWinner() {
-    if (this.player.hp === this.enemy.hp) return null
-    return this.player.hp > this.enemy.hp ? this.player : this.enemy
+    const pPct = this.player.hp / this.player.d.maxHp
+    const ePct = this.enemy.hp / this.enemy.d.maxHp
+    if (pPct === ePct) return null
+    return pPct > ePct ? this.player : this.enemy
   }
 
   endRound(winner, headline) {
@@ -181,7 +191,7 @@ export class BattleScene extends Phaser.Scene {
     const cx = T.arena.width / 2
     const cy = T.arena.height / 2
     this.add
-      .text(cx, cy - 40, headline, {
+      .text(cx, cy - 60, headline, {
         fontFamily: 'Arial, sans-serif',
         fontSize: '56px',
         fontStyle: 'bold',
@@ -190,7 +200,7 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(60)
     this.add
-      .text(cx, cy + 14, winner ? `${winner.name} WINS` : 'DRAW', {
+      .text(cx, cy - 6, winner ? `${winner.name.toUpperCase()} WINS` : 'DRAW', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '30px',
         fontStyle: 'bold',
@@ -200,17 +210,38 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(60)
 
     this.time.delayedCall(900, () => {
+      this.makeEndOption(cx, cy + 52, 'REMATCH', () =>
+        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id }),
+      )
+      this.makeEndOption(cx, cy + 96, 'CHANGE CHARACTER', () => this.scene.start('Select'))
       this.add
-        .text(cx, cy + 62, 'tap or press ENTER for rematch', {
+        .text(cx, cy + 134, 'ENTER rematch · C change character', {
           fontFamily: 'Arial, sans-serif',
-          fontSize: '18px',
+          fontSize: '13px',
           color: '#8a8ab0',
         })
         .setOrigin(0.5)
         .setDepth(60)
-      const rematch = () => this.scene.restart()
-      this.input.once('pointerdown', rematch)
-      this.input.keyboard.once('keydown-ENTER', rematch)
+      this.input.keyboard.once('keydown-ENTER', () =>
+        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id }),
+      )
+      this.input.keyboard.once('keydown-C', () => this.scene.start('Select'))
     })
+  }
+
+  makeEndOption(x, y, label, onSelect) {
+    const text = this.add
+      .text(x, y, label, {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '24px',
+        fontStyle: 'bold',
+        color: '#ffffff',
+      })
+      .setOrigin(0.5)
+      .setDepth(60)
+      .setInteractive({ useHandCursor: true })
+    text.on('pointerover', () => text.setColor('#ffe81f'))
+    text.on('pointerout', () => text.setColor('#ffffff'))
+    text.on('pointerdown', onSelect)
   }
 }
