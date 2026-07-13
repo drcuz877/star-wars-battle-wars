@@ -14,13 +14,14 @@ import { startSpecial, updateSpecial, cancelSpecial, specialLocks } from './spec
 // different things per archetype — saber block/deflect, blaster dodge
 // with i-frames, brawler brace. Blasters attack with ranged bolts.
 export class Fighter {
-  constructor(scene, { x, character, facing }) {
+  constructor(scene, { x, character, facing, hpMult = 1 }) {
     this.scene = scene
     this.character = character
     this.name = character.name
     this.facing = facing // 1 = facing right, -1 = facing left
     this.baseColor = character.color
     this.d = deriveStats(character)
+    this.d.maxHp = Math.round(this.d.maxHp * hpMult) // epic-duel bonus (scene decides)
 
     this.hp = this.d.maxHp
     this.stamina = T.fighter.maxStamina

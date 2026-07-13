@@ -20,6 +20,12 @@ export const TUNING = {
   // but never certainly.
   variance: 0.12,
 
+  // Legendary duels: when BOTH fighters rate at or above minOvr, both get
+  // the HP multiplier so top-tier matches last longer. Applying it only
+  // when the two are top-tier together means no gap ever widens — a
+  // Yoda-vs-Grogu match is completely unaffected.
+  epicDuel: { minOvr: 85, hpMult: 1.35 },
+
   // How the 0–25 stats become combat numbers: value = base + perPoint × stat.
   derive: {
     hp: { base: 60, perDef: 1.0, perStr: 0.4, brawlerBonus: 8 },

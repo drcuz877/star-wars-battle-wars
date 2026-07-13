@@ -197,6 +197,11 @@ function actSide(self, other) {
 export function duel(charA, charB) {
   const a = makeSide(charA)
   const b = makeSide(charB)
+  // Legendary-duel HP bonus, same rule as BattleScene.
+  if (overall(charA) >= T.epicDuel.minOvr && overall(charB) >= T.epicDuel.minOvr) {
+    a.d.maxHp = Math.round(a.d.maxHp * T.epicDuel.hpMult)
+    b.d.maxHp = Math.round(b.d.maxHp * T.epicDuel.hpMult)
+  }
   a.hp = a.d.maxHp
   b.hp = b.d.maxHp
   a.x = 300

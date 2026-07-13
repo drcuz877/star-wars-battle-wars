@@ -1,6 +1,6 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
-import { CHARACTERS } from '../data/characters.js'
+import { CHARACTERS, overall } from '../data/characters.js'
 import { Fighter } from '../combat/fighter.js'
 import { Projectiles } from '../combat/projectiles.js'
 import { SparAI } from '../combat/ai.js'
@@ -48,9 +48,31 @@ export class BattleScene extends Phaser.Scene {
     )
 
     this.projectiles = new Projectiles(this)
-    this.player = new Fighter(this, { x: 300, character: this.p1Char, facing: 1 })
-    this.enemy = new Fighter(this, { x: 660, character: this.p2Char, facing: -1 })
+
+    // Legendary duel: two top-tier fighters both get extra HP so the
+    // marquee matches last longer (see tuning.epicDuel).
+    const epic =
+      overall(this.p1Char) >= T.epicDuel.minOvr && overall(this.p2Char) >= T.epicDuel.minOvr
+    const hpMult = epic ? T.epicDuel.hpMult : 1
+
+    this.player = new Fighter(this, { x: 300, character: this.p1Char, facing: 1, hpMult })
+    this.enemy = new Fighter(this, { x: 660, character: this.p2Char, facing: -1, hpMult })
     this.physics.add.collider(this.player.rect, this.enemy.rect)
+
+    if (epic) {
+      const banner = this.add
+        .text(T.arena.width / 2, 200, '⚔  LEGENDARY DUEL  ⚔', {
+          fontFamily: 'Arial Black, Arial, sans-serif',
+          fontSize: '30px',
+          fontStyle: 'bold',
+          color: '#ffe81f',
+          stroke: '#000000',
+          strokeThickness: 5,
+        })
+        .setOrigin(0.5)
+        .setDepth(55)
+      this.tweens.add({ targets: banner, alpha: 0, delay: 1600, duration: 700, onComplete: () => banner.destroy() })
+    }
 
     this.keyboard = new KeyboardControls(this)
     this.touch = this.sys.game.device.input.touch ? new TouchControls(this) : null
