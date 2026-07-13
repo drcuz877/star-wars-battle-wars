@@ -140,6 +140,21 @@ export class Fighter {
     this.cooldown = spec.windupMs + spec.activeMs + spec.cooldownMs
     if (isSpecial) {
       this.special = 0
+      // Placeholder special spectacle: gold screen flash + expanding
+      // shockwave ring. Character signature specials replace this in Phase 2.
+      this.scene.cameras.main.flash(130, 255, 225, 80)
+      const ring = this.scene.add
+        .circle(this.rect.x, this.rect.y, 24)
+        .setStrokeStyle(5, 0xffd700)
+        .setDepth(40)
+      this.scene.tweens.add({
+        targets: ring,
+        scale: 4.5,
+        alpha: 0,
+        duration: 380,
+        ease: 'Quad.easeOut',
+        onComplete: () => ring.destroy(),
+      })
     } else {
       this.stamina -= T.attack.staminaCost
       this.staminaPause = spec.windupMs + spec.activeMs + T.stamina.regenDelayMs
@@ -151,8 +166,11 @@ export class Fighter {
   }
 
   updateVisuals() {
-    // Cyan outline while blocking.
-    this.rect.setStrokeStyle(this.blocking ? 3 : 0, 0x66ffff)
+    // Cyan outline while blocking; gold outline when a special is charged —
+    // the at-a-glance "use it now" cue (and a tell when the AI has one).
+    if (this.blocking) this.rect.setStrokeStyle(3, 0x66ffff)
+    else if (this.specialReady) this.rect.setStrokeStyle(3, 0xffe81f)
+    else this.rect.setStrokeStyle(0)
 
     // The weapon flash is the real hitbox: faint during windup, solid while
     // it can connect. Specials are gold and bigger.

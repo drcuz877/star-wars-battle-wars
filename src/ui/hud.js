@@ -8,6 +8,7 @@ const SPECIAL_W = 160
 // Left corner for the player, mirrored right corner for the opponent.
 export class Hud {
   constructor(scene, fighter, side) {
+    this.scene = scene
     this.fighter = fighter
     const left = side === 'left'
     const x = left ? 24 : T.arena.width - 24
@@ -25,6 +26,19 @@ export class Hud {
     this.healthFill = this.makeBar(scene, x, 48, HEALTH_W, 16, 0x3ddc55, originX)
     this.staminaFill = this.makeBar(scene, x, 68, STAMINA_W, 8, 0xffc94d, originX)
     this.specialFill = this.makeBar(scene, x, 82, SPECIAL_W, 8, 0x4da6ff, originX)
+
+    // Flashes alongside the pulsing bar when the special is charged.
+    this.readyText = this.scene.add
+      .text(left ? x + SPECIAL_W + 10 : x - SPECIAL_W - 10, 82, 'READY!', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#ffe81f',
+      })
+      .setOrigin(originX, 0.5)
+      .setVisible(false)
+    this.readyState = false
+    this.pulse = null
   }
 
   makeBar(scene, x, y, width, height, color, originX) {
@@ -45,5 +59,24 @@ export class Hud {
 
     this.specialFill.scaleX = f.special / T.fighter.maxSpecial
     this.specialFill.setFillStyle(f.specialReady ? 0xffe81f : 0x4da6ff)
+
+    // Start/stop the ready flash only on state changes.
+    if (f.specialReady !== this.readyState) {
+      this.readyState = f.specialReady
+      if (f.specialReady) {
+        this.readyText.setVisible(true)
+        this.pulse = this.scene.tweens.add({
+          targets: [this.specialFill, this.readyText],
+          alpha: 0.25,
+          duration: 260,
+          yoyo: true,
+          repeat: -1,
+        })
+      } else {
+        if (this.pulse) this.pulse.stop()
+        this.specialFill.setAlpha(1)
+        this.readyText.setVisible(false).setAlpha(1)
+      }
+    }
   }
 }

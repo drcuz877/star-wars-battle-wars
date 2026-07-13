@@ -1,7 +1,7 @@
 import Phaser from 'phaser'
 
-// Drew's default scheme: arrows move, Space jumps, A attacks, D defends,
-// and holding S while pressing A fires the Special.
+// Drew's default scheme: arrows move, Space jumps, A attacks, D defends.
+// Special fires on W directly, or the original S+A chord (hold S, press A).
 export class KeyboardControls {
   constructor(scene) {
     this.keys = scene.input.keyboard.addKeys({
@@ -11,6 +11,7 @@ export class KeyboardControls {
       attack: 'A',
       defend: 'D',
       chord: 'S',
+      special: 'W',
     })
   }
 
@@ -24,7 +25,7 @@ export class KeyboardControls {
       defend: k.defend.isDown,
       jumpPressed: Phaser.Input.Keyboard.JustDown(k.jump),
       attackPressed: attackTapped && !chordHeld,
-      specialPressed: attackTapped && chordHeld,
+      specialPressed: (attackTapped && chordHeld) || Phaser.Input.Keyboard.JustDown(k.special),
     }
   }
 }

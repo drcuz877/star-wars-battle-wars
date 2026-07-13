@@ -64,6 +64,20 @@ export class TouchControls {
   }
 
   setSpecialReady(ready) {
-    this.specialButton.setStrokeStyle(ready ? 3 : 2, ready ? 0xffe81f : 0xffffff, ready ? 1 : 0.35)
+    if (ready === this.specialReadyState) return
+    this.specialReadyState = ready
+    if (ready) {
+      this.specialButton.setStrokeStyle(4, 0xffe81f, 1)
+      this.specialPulse = this.scene.tweens.add({
+        targets: this.specialButton,
+        alpha: 0.4,
+        duration: 280,
+        yoyo: true,
+        repeat: -1,
+      })
+    } else {
+      if (this.specialPulse) this.specialPulse.stop()
+      this.specialButton.setAlpha(1).setStrokeStyle(2, 0xffffff, 0.35)
+    }
   }
 }

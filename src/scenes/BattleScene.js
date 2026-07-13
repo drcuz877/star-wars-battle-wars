@@ -58,7 +58,7 @@ export class BattleScene extends Phaser.Scene {
         .text(
           T.arena.width / 2,
           T.arena.height - 22,
-          '← → move    SPACE jump    A attack    D defend (hold)    S + A special',
+          '← → move    SPACE jump    A attack    D defend (hold)    W (or S+A) special',
           { fontFamily: 'Arial, sans-serif', fontSize: '14px', color: '#8a8ab0' },
         )
         .setOrigin(0.5)

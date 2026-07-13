@@ -148,6 +148,17 @@ try {
   const s4 = await state()
   check('S+A chord fires the special (meter consumed)', s4.pspec === 0, `meter 100 -> ${s4.pspec}`)
 
+  // W as the direct single-key special.
+  await isolate()
+  await page.evaluate(() => {
+    window.game.scene.keys.Battle.player.special = 100
+  })
+  await page.waitForTimeout(1000)
+  await tap('w')
+  await page.waitForTimeout(150)
+  const s4b = await state()
+  check('W fires the special directly', s4b.pspec === 0, `meter 100 -> ${s4b.pspec}`)
+
   // KO path: drop enemy to 1 HP, finish it with real hits.
   await page.evaluate(() => {
     const s = window.game.scene.keys.Battle
