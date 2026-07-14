@@ -23,6 +23,7 @@ export class PauseScene extends Phaser.Scene {
 
     this.makeOption(cx, 250, 'RESUME', () => this.resumeBattle())
     this.makeOption(cx, 310, 'RESTART MATCH', () => this.restartBattle())
+    this.makeOption(cx, 370, 'QUIT GAME', () => this.quitGame())
 
     this.add
       .text(cx, 375, 'settings (controls · sound) coming in a later phase', {
@@ -66,5 +67,11 @@ export class PauseScene extends Phaser.Scene {
   restartBattle() {
     this.scene.stop()
     this.scene.get('Battle').scene.restart()
+  }
+
+  quitGame() {
+    this.scene.stop()
+    this.scene.stop('Battle')
+    this.scene.start('Select')
   }
 }
