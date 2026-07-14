@@ -8,6 +8,7 @@ import { tierById, DEFAULT_TIER_ID } from '../data/ai-tiers.js'
 import { KeyboardControls } from '../input/controls.js'
 import { TouchControls } from '../input/touch.js'
 import { Hud } from '../ui/hud.js'
+import { createArena } from './arenas/index.js'
 
 const byId = (id) => CHARACTERS.find((c) => c.id === id)
 
@@ -32,23 +33,9 @@ export class BattleScene extends Phaser.Scene {
     // Floor of the physics world = the arena ground line.
     this.physics.world.setBounds(0, -160, T.arena.width, T.arena.groundY + 160)
 
-    this.add.rectangle(T.arena.width / 2, T.arena.height / 2, T.arena.width, T.arena.height, 0x0a0a14)
-    for (let i = 0; i < 60; i++) {
-      this.add.circle(
-        Math.random() * T.arena.width,
-        Math.random() * (T.arena.groundY - 40),
-        Math.random() * 1.5 + 0.5,
-        0xffffff,
-        0.25 + Math.random() * 0.5,
-      )
-    }
-    this.add.rectangle(
-      T.arena.width / 2,
-      (T.arena.groundY + T.arena.height) / 2,
-      T.arena.width,
-      T.arena.height - T.arena.groundY,
-      0x1c1c2e,
-    )
+    // Backdrop: one of the arenas, picked at random each match (Phase 4).
+    // Purely cosmetic — the ground line and bounds are identical for all.
+    this.arena = createArena(this)
 
     this.projectiles = new Projectiles(this)
 
@@ -151,6 +138,9 @@ export class BattleScene extends Phaser.Scene {
   }
 
   update(_time, delta) {
+    // Ambient arena motion (embers, dust) runs even after the round ends.
+    this.arena.update?.(delta)
+
     if (this.roundOver) return
 
     // Fighters always face each other.

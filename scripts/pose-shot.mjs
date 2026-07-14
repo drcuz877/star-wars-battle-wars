@@ -133,5 +133,18 @@ await shot('09-bolt-flight')
 await page.waitForTimeout(320)
 await shot('10-bolt-impact')
 
+// --- Third scenario: capture each arena backdrop (restart until both seen) ---
+const seen = new Set()
+for (let i = 0; i < 12 && seen.size < 2; i++) {
+  const id = await page.evaluate(() => window.game.scene.keys.Battle.arena.def.id)
+  if (!seen.has(id)) {
+    seen.add(id)
+    await page.waitForTimeout(400)
+    await shot(`11-arena-${id}`)
+  }
+  await page.evaluate(() => window.game.scene.keys.Battle.scene.restart())
+  await page.waitForTimeout(700)
+}
+
 await browser.close()
 console.log(`poses written to ${OUT}/`)
