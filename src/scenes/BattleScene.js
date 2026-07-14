@@ -211,12 +211,21 @@ export class BattleScene extends Phaser.Scene {
 
     const cx = T.arena.width / 2
     const cy = T.arena.height / 2
+    // Panel behind the verdict so it reads on bright arenas (Tatooine's
+    // dusk sky washed out bare text), in the menus' shared language.
+    this.add
+      .rectangle(cx, cy + 34, 440, 300, 0x0c1424, 0.82)
+      .setStrokeStyle(2, 0xffe81f, 0.5)
+      .setDepth(59)
     this.add
       .text(cx, cy - 60, headline, {
-        fontFamily: 'Arial, sans-serif',
+        fontFamily: 'Arial Black, Arial, sans-serif',
         fontSize: '56px',
         fontStyle: 'bold',
         color: '#ffe81f',
+        stroke: '#000000',
+        strokeThickness: 6,
+        shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 10, fill: true },
       })
       .setOrigin(0.5)
       .setDepth(60)

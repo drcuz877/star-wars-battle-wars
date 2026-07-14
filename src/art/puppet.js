@@ -170,6 +170,18 @@ export function createPuppet(scene, fighter) {
   return new Puppet(scene, fighter, def)
 }
 
+// Menu portraits reuse the battle head, baked on demand: returns the head
+// texture key for an arted character, or null so menus keep their
+// placeholder swatch. Textures are game-global, so whichever scene bakes
+// first (menu or battle), the other reuses it.
+export function portraitKey(scene, character) {
+  const def = PUPPETS[character.id]
+  if (!def) return null
+  const key = `pp:${character.id}:head`
+  bake(scene, key, HEAD_W, HEAD_H, (p) => HEADS[def.head.type](p, def.head))
+  return key
+}
+
 export class Puppet {
   constructor(scene, fighter, def) {
     this.scene = scene

@@ -1,7 +1,10 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
 import { AI_TIERS } from '../data/ai-tiers.js'
+import { CHARACTERS } from '../data/characters.js'
 import { loadJSON, saveJSON } from '../util/storage.js'
+import { portraitKey } from '../art/puppet.js'
+import { RENDER_SCALE } from '../util/display.js'
 
 const GOLD = '#ffe81f'
 
@@ -62,6 +65,26 @@ export class DifficultyScene extends Phaser.Scene {
         color: '#8a8ab0',
       })
       .setOrigin(0.5)
+
+    // The matchup this rank applies to, with portraits where they exist.
+    const p1 = CHARACTERS.find((c) => c.id === this.p1Id)
+    const p2 = CHARACTERS.find((c) => c.id === this.p2Id)
+    if (p1 && p2) {
+      const vs = this.add
+        .text(W / 2, 136, `${p1.name.toUpperCase()}   VS   ${p2.name.toUpperCase()}`, {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '15px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0.5)
+        .setAlpha(0.9)
+      const k1 = portraitKey(this, p1)
+      const k2 = portraitKey(this, p2)
+      const half = vs.width / 2
+      if (k1) this.add.image(W / 2 - half - 26, 134, k1).setScale(1.3 / RENDER_SCALE)
+      if (k2) this.add.image(W / 2 + half + 26, 134, k2).setScale(1.3 / RENDER_SCALE)
+    }
 
     const lastId = loadJSON('lastDifficulty', null)
     const cardW = 210

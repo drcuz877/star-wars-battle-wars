@@ -1,6 +1,8 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
 import { CHARACTERS, overall } from '../data/characters.js'
+import { portraitKey } from '../art/puppet.js'
+import { RENDER_SCALE } from '../util/display.js'
 
 const ARCHETYPE_ICON = { saber: '🗡', blaster: '🔫', brawler: '🐻' }
 const GOLD = '#ffe81f'
@@ -96,14 +98,27 @@ export class SelectScene extends Phaser.Scene {
       .setStrokeStyle(2, sideColor, 0.75)
       .setInteractive({ useHandCursor: true })
 
-    // Placeholder "portrait": character-colored panel with the archetype
-    // icon — replaced by real portraits in the Phase 4 art pass.
+    // Portrait band: arted characters show their real (battle-rig) head
+    // over the band, with the archetype icon tucked into the corner;
+    // everyone else keeps the colored swatch + centered icon until their
+    // Phase 4 art lands.
     const portrait = this.add.rectangle(0, -25, 106, 32, c.color, 0.92)
     const portraitShade = this.add.rectangle(0, -17, 106, 15, 0x000000, 0.25)
+    const headKey = portraitKey(this, c)
+    const pieces = [portrait, portraitShade]
+    if (headKey) {
+      pieces.push(
+        this.add.rectangle(0, -25, 106, 32, 0x000000, 0.45), // dim the band so the face pops
+        this.add.image(0, -22, headKey).setScale(1.45 / RENDER_SCALE),
+      )
+    }
     const icon = this.add
-      .text(0, -25, ARCHETYPE_ICON[c.archetype], { fontSize: '15px' })
+      .text(headKey ? 44 : 0, headKey ? -33 : -25, ARCHETYPE_ICON[c.archetype], {
+        fontSize: headKey ? '11px' : '15px',
+      })
       .setOrigin(0.5)
       .setAlpha(0.9)
+    pieces.push(icon)
 
     const name = this.add
       .text(0, 6, c.name, {
@@ -124,7 +139,7 @@ export class SelectScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    container.add([card, portrait, portraitShade, icon, name, ovr])
+    container.add([card, ...pieces, name, ovr])
 
     card.on('pointerover', () => {
       card.setFillStyle(light ? 0x1b2b4a : 0x331a22)

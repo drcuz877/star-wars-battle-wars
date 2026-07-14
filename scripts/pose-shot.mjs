@@ -19,6 +19,8 @@ await page.goto(URL)
 await page.waitForSelector('canvas', { timeout: 10000 })
 await page.waitForTimeout(900)
 
+const shot = (name) => page.screenshot({ path: `${OUT}/${name}.png` })
+
 const click = async (scene, id) => {
   const pos = await page.evaluate(
     ([s, cid]) => window.game.scene.keys[s].cards.find((c) => c.id === cid),
@@ -27,8 +29,11 @@ const click = async (scene, id) => {
   await page.mouse.click(pos.x, pos.y)
   await page.waitForTimeout(250)
 }
+await shot('00-select')
 await click('Select', 'luke')
 await click('Select', 'vader')
+await page.waitForTimeout(300)
+await shot('00b-difficulty')
 await click('Difficulty', 'initiate')
 await page.waitForTimeout(700)
 
@@ -41,8 +46,6 @@ const isolate = () =>
     s.enemy.body.reset(660, 430)
     s.enemy.hitstun = 60000
   })
-
-const shot = (name) => page.screenshot({ path: `${OUT}/${name}.png` })
 
 await isolate()
 await page.waitForTimeout(600)
@@ -79,6 +82,13 @@ await page.waitForTimeout(300)
 await shot('06-block')
 await page.keyboard.up('d')
 
+// Pause menu
+await page.keyboard.press('Escape', { delay: 60 })
+await page.waitForTimeout(300)
+await shot('06b-pause')
+await page.keyboard.press('Escape', { delay: 60 })
+await page.waitForTimeout(300)
+
 // Special (Luke's Force Push -> grip pose), in range so it visibly fires
 await page.evaluate(() => {
   const s = window.game.scene.keys.Battle
@@ -111,6 +121,8 @@ for (let i = 0; i < 20; i++) {
 }
 await page.waitForTimeout(600)
 await shot('08-ko')
+await page.waitForTimeout(1400)
+await shot('08b-end-menu')
 
 // --- Second scenario: blaster VFX (bolt glow/trail + impact burst) ---
 await page.goto(URL)

@@ -10,32 +10,39 @@ export class PauseScene extends Phaser.Scene {
 
   create() {
     const cx = T.arena.width / 2
-    this.add.rectangle(cx, T.arena.height / 2, T.arena.width, T.arena.height, 0x000000, 0.65)
+    const cy = T.arena.height / 2
+    this.add.rectangle(cx, cy, T.arena.width, T.arena.height, 0x000000, 0.65)
+
+    // Panel in the menus' shared language: deep blue, gold-edged.
+    this.add.rectangle(cx, cy + 10, 380, 330, 0x0c1424, 0.92).setStrokeStyle(2, 0xffe81f, 0.5)
 
     this.add
       .text(cx, 150, 'PAUSED', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '48px',
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: '44px',
         fontStyle: 'bold',
         color: '#ffe81f',
+        stroke: '#000000',
+        strokeThickness: 6,
+        shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 10, fill: true },
       })
       .setOrigin(0.5)
 
-    this.makeOption(cx, 250, 'RESUME', () => this.resumeBattle())
-    this.makeOption(cx, 310, 'RESTART MATCH', () => this.restartBattle())
-    this.makeOption(cx, 370, 'QUIT GAME', () => this.quitGame())
+    this.makeOption(cx, 240, 'RESUME', () => this.resumeBattle())
+    this.makeOption(cx, 298, 'RESTART MATCH', () => this.restartBattle())
+    this.makeOption(cx, 356, 'QUIT GAME', () => this.quitGame())
 
     this.add
-      .text(cx, 375, 'settings (controls · sound) coming in a later phase', {
+      .text(cx, 408, 'settings (controls · sound) coming in a later phase', {
         fontFamily: 'Arial, sans-serif',
-        fontSize: '14px',
+        fontSize: '13px',
         color: '#666688',
       })
       .setOrigin(0.5)
     this.add
-      .text(cx, 410, 'ESC or P also resumes', {
+      .text(cx, 430, 'ESC or P also resumes', {
         fontFamily: 'Arial, sans-serif',
-        fontSize: '13px',
+        fontSize: '12px',
         color: '#666688',
       })
       .setOrigin(0.5)
