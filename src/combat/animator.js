@@ -1,0 +1,100 @@
+import { TUNING as T } from './tuning.js'
+
+// Maps a fighter's combat state to a puppet pose, every frame. Pure
+// function: reads the fighter, returns numbers; puppet.js applies them.
+//
+// Angle convention (before the facing flip): 0 = limb hanging straight
+// down, negative swings it FORWARD (toward the opponent), positive swings
+// it BACK. `wpn` is the saber's angle relative to the forearm — 180 means
+// the blade continues the arm's line, smaller values fold it upward.
+// The same numbers work for both fighters because the whole puppet is
+// mirrored by facing, exactly like the combat code's facing convention.
+//
+// Poses are TARGETS: puppet.js eases toward them (about 70ms), except
+// attacks, which set `snap` so the swing arc is frame-accurate with the
+// real hitbox timing in fighter.js (90ms windup + 140ms active window).
+
+const easeOut = (p) => 1 - (1 - p) * (1 - p)
+
+export function computePose(f, now) {
+  const pose = {
+    armF: -22, armB: 12, legF: 0, legB: 0,
+    head: 0, wpn: 168, rigY: Math.sin(now / 420) * 1.6, rigAng: 0,
+    cape: Math.sin(now / 500) * 2,
+    snap: false,
+  }
+
+  if (f.ko) {
+    // Limp: the KO topple itself is the rect-angle tween mirrored by root.
+    Object.assign(pose, { armF: -10, armB: 14, legF: -6, legB: 8, head: 12, wpn: 172, rigY: 0, rigAng: 0 })
+    return pose
+  }
+
+  // Legs first — they follow locomotion regardless of what the arms do.
+  if (!f.onGround) {
+    pose.legF = -26
+    pose.legB = 30
+    pose.armB = -30
+    pose.rigY = 0
+  } else {
+    const vx = f.body.velocity.x
+    if (Math.abs(vx) > 40) {
+      const ph = Math.sin(now * 0.014)
+      pose.legF = ph * 28
+      pose.legB = -ph * 28
+      pose.armB = 12 - ph * 10
+      pose.rigY = -Math.abs(Math.cos(now * 0.014)) * 1.4
+      pose.rigAng = Math.sign(vx) * f.facing * 2.5 // slight lean into the run
+    }
+  }
+
+  if (f.hitstun > 0) {
+    Object.assign(pose, { armF: -40, armB: 45, head: -14, wpn: 150, rigAng: -9 })
+    return pose
+  }
+
+  if (f.specialRun) {
+    const tpl = f.specialRun.template
+    if (tpl === 'grip') {
+      // Force Push / Choke: off-hand thrust forward, saber pulled back.
+      Object.assign(pose, { armB: -100, armF: 25, wpn: 160, rigAng: 6 })
+    } else if (tpl === 'dash') {
+      Object.assign(pose, { armF: -92, wpn: 178, legF: -30, legB: 34, rigAng: 12 })
+    } else {
+      // Generic channel: both arms raised outward.
+      Object.assign(pose, { armF: -35, armB: -25, wpn: 150, rigAng: 3 })
+    }
+    return pose
+  }
+
+  if (f.swinging) {
+    pose.snap = true
+    if (f.swingT < T.attack.windupMs) {
+      // Windup: arm cocked up and back, blade raised — the telegraph.
+      const p = f.swingT / T.attack.windupMs
+      pose.armF = -22 + (145 - -22) * p
+      pose.wpn = 150
+      pose.head = -6
+      pose.rigAng = -5
+    } else {
+      // Active window: sweep from up-back to low-front while the real
+      // hitbox can connect.
+      const p = Math.min(1, (f.swingT - T.attack.windupMs) / T.attack.activeMs)
+      pose.armF = 145 + (-110 - 145) * easeOut(p)
+      pose.wpn = 178
+      pose.head = 2
+      pose.rigAng = 7
+    }
+    return pose
+  }
+
+  if (f.blocking) {
+    Object.assign(pose, {
+      armF: -70, armB: 25, wpn: 62, head: -4,
+      legF: -8, legB: 10, rigY: pose.rigY + 2,
+    })
+    return pose
+  }
+
+  return pose
+}

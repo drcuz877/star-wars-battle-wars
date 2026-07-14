@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { TUNING as T } from './tuning.js'
 import { deriveStats } from './derive.js'
 import { startSpecial, updateSpecial, cancelSpecial, specialLocks } from './specials.js'
+import { createPuppet } from '../art/puppet.js'
 
 // One fighter: a physics rectangle plus combat state (HP, stamina, special
 // meter, swing/hitstun timers). The player and the AI both drive a Fighter
@@ -42,6 +43,13 @@ export class Fighter {
     // Melee swing flash — tinted with the character's saber color.
     this.weaponColor = character.saber?.colors?.[0] ?? 0xffffff
     this.weapon = scene.add.rectangle(x, 0, T.attack.reach, 16, this.weaponColor).setVisible(false)
+
+    // Phase 4 art: characters with a puppets.js entry render as a layered
+    // puppet that follows this (hidden) physics rectangle. Everyone else
+    // keeps the rectangle until their art lands. Combat never branches on
+    // this — only visuals do.
+    this.puppet = createPuppet(scene, this)
+    if (this.puppet) this.rect.setVisible(false)
 
     this.swingT = -1 // ms since the current swing started; -1 = not swinging
     this.swingLanded = false
@@ -281,6 +289,11 @@ export class Fighter {
   }
 
   updateVisuals() {
+    // Puppet fighters pose themselves on the scene's post-update (their
+    // ground ring shows the same state colors the outline used to), and
+    // the weapon flash stays hidden — the animated saber IS the swing.
+    if (this.puppet) return
+
     // Outline = current defensive/special state, at a glance (and a tell
     // when the AI has one): cyan block, white counter stance, green
     // barrier, orange rage, gold special-ready.
@@ -401,6 +414,7 @@ export class Fighter {
   }
 
   flash() {
+    if (this.puppet) return this.puppet.flash()
     this.rect.setFillStyle(0xffffff)
     this.scene.time.delayedCall(80, () => {
       if (!this.ko) this.rect.setFillStyle(this.baseColor)
@@ -413,8 +427,11 @@ export class Fighter {
     this.endSwing()
     this.weapon.setVisible(false)
     this.blocking = false
-    this.rect.setFillStyle(0x555566)
-    this.rect.setAlpha(1)
+    if (this.puppet) this.puppet.setKo()
+    else {
+      this.rect.setFillStyle(0x555566)
+      this.rect.setAlpha(1)
+    }
     this.body.setVelocity(dir * 180, -220)
     this.scene.tweens.add({
       targets: this.rect,
