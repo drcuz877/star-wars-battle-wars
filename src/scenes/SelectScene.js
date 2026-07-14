@@ -169,7 +169,7 @@ export class SelectScene extends Phaser.Scene {
       this.subtitle.setText(`YOUR FIGHTER: ${c.name.toUpperCase()}`).setColor(GOLD)
       if (card) card.setStrokeStyle(3, 0xffe81f, 1)
     } else {
-      this.scene.start('Battle', { p1: this.p1.id, p2: c.id })
+      this.scene.start('Difficulty', { p1: this.p1.id, p2: c.id })
     }
   }
 }

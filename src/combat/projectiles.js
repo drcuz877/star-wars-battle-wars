@@ -88,7 +88,12 @@ export class Projectiles {
           attacker: bolt.owner,
           damage: bolt.damage,
           knockback: bolt.knockback,
-          hitstunMs: Math.max(bolt.stunMs, T.attack.hitstunMs * 0.8),
+          // Normal blaster bolts stun less than special projectiles, so a
+          // closing melee fighter isn't repeatedly reset on the approach.
+          hitstunMs: Math.max(
+            bolt.stunMs,
+            T.attack.hitstunMs * (bolt.fromSpecial ? 0.8 : T.bolt.hitstunMult),
+          ),
           unblockable: bolt.sure,
           ranged: true,
           charges: !bolt.fromSpecial,

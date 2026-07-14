@@ -1,25 +1,23 @@
 import Phaser from 'phaser'
 import { TUNING as T } from './combat/tuning.js'
 import { validateCharacters } from './data/characters.js'
+import { RENDER_SCALE } from './util/display.js'
 import { SelectScene } from './scenes/SelectScene.js'
+import { DifficultyScene } from './scenes/DifficultyScene.js'
 import { BattleScene } from './scenes/BattleScene.js'
 import { PauseScene } from './scenes/PauseScene.js'
 
 // Clamp any stat typos in characters.js before anything reads them.
 validateCharacters()
 
-// Crisp text on big/high-DPI screens (Phase 2 checkpoint feedback: menus
-// looked blurry). Phaser draws each Text object to an internal texture at
-// resolution 1 by default, and FIT-mode upscaling of the 960px-wide canvas
-// to a large display blurs it. Default every Text object to the actual
-// upscale factor (window size × device pixel ratio vs game size), capped
-// at 3 (each step costs texture memory). Explicit style.resolution still wins.
-const upscale = (window.innerWidth * (window.devicePixelRatio || 1)) / T.arena.width
-const TEXT_DPR = Math.min(Math.max(1, Math.ceil(upscale)), 3)
+// Crisp text on big/high-DPI screens. Phaser draws each Text object to an
+// internal texture at resolution 1 by default, which looks blurry once the
+// canvas is stretched to a large display. Default every Text object to
+// RENDER_SCALE (see util/display.js). Explicit style.resolution still wins.
 const setStyle = Phaser.GameObjects.TextStyle.prototype.setStyle
 Phaser.GameObjects.TextStyle.prototype.setStyle = function (style, updateText, setDefaults) {
   const out = setStyle.call(this, style, updateText, setDefaults)
-  if (this.resolution === 0) this.resolution = TEXT_DPR
+  if (this.resolution === 0) this.resolution = RENDER_SCALE
   return out
 }
 
@@ -34,7 +32,7 @@ const game = new Phaser.Game({
     width: T.arena.width,
     height: T.arena.height,
   },
-  scene: [SelectScene, BattleScene, PauseScene],
+  scene: [SelectScene, DifficultyScene, BattleScene, PauseScene],
 })
 
 // Handle for debugging and automated verification scripts.

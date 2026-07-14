@@ -14,6 +14,11 @@ export const TUNING = {
     gravity: 1500,
     maxStamina: 100,
     maxSpecial: 100,
+    // Moving AWAY from your opponent is slower than advancing. This is the
+    // core anti-kite rule: a blaster can no longer fire and out-run a melee
+    // chaser forever (2026-07-13 playtest — Cad Bane was beating Yoda by
+    // pure kiting). 1.0 = no penalty; lower = harder to run away.
+    backpedalMult: 0.6,
   },
 
   // Every hit's damage is nudged by up to ±12% so favorites usually win
@@ -62,6 +67,17 @@ export const TUNING = {
     width: 18,
     height: 6,
     deflectSpeedMult: 1.15, // deflected bolts fly back a little faster
+    // Anti-kite (2026-07-13 playtest): a blaster can't shoot AND full-speed
+    // retreat at once, and a landed bolt should slow an approaching melee
+    // fighter without fully resetting it.
+    fireRootMs: 180, // ground movement is locked this long after firing
+    knockbackMult: 0.5, // normal bolts shove half as hard as the shooter's melee
+    hitstunMult: 0.55, // and stun less (× attack.hitstunMs) so a closer keeps coming
+    // No more sniping from across the whole arena — a blaster must be
+    // within this distance of its target to fire at all (2026-07-14
+    // playtest fix). Matches ai.rangedInRange so the AI and the player
+    // face the identical rule.
+    maxRange: 430,
   },
 
   dodge: {
@@ -93,5 +109,16 @@ export const TUNING = {
     counter: { stanceMs: 900, reflectDamage: 14 },
     flurry: { hits: 5, hitDamage: 3.6, rehitMs: 150, reachBonus: 12 },
     sureShot: { damage: 18, speed: 1050 },
+  },
+
+  // Distance thresholds the AI (src/combat/ai.js, tiers in
+  // src/data/ai-tiers.js) uses to decide whether it's in range to attack
+  // and how blaster archetypes hold their kiting band.
+  ai: {
+    meleeInRange: 100,
+    meleeStopDistance: 70,
+    rangedInRange: 430,
+    rangedKiteNear: 180,
+    rangedKiteFar: 480,
   },
 }

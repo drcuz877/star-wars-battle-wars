@@ -170,9 +170,11 @@ function actSide(self, other) {
     return
   }
 
-  // Keep to the kit's preferred range.
+  // Keep to the kit's preferred range. Backing away is slower than
+  // advancing (T.fighter.backpedalMult) — same anti-kite rule as the real
+  // game, so the sim doesn't over-credit blasters for out-running melee.
   if (ranged) {
-    if (dist < 200) self.x -= dir * self.d.moveSpeed * DT
+    if (dist < 200) self.x -= dir * self.d.moveSpeed * T.fighter.backpedalMult * DT
     else if (dist > 430) self.x += dir * self.d.moveSpeed * DT
   } else if (dist > 70) {
     self.x += dir * self.d.moveSpeed * DT

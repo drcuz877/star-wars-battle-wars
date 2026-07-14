@@ -57,16 +57,34 @@ try {
   check('clicking a fighter advances to opponent pick', picking === 'p2')
 
   await clickCard('vader')
+  await page.waitForTimeout(300)
+
+  // --- Difficulty select: pick Initiate (closest tier to the old baseline
+  // AI, so the timing-sensitive checks below stay valid).
+  const diffCount = await page.evaluate(() => window.game.scene.keys.Difficulty.cards.length)
+  check('difficulty screen shows all 4 Jedi ranks', diffCount === 4, `${diffCount} cards`)
+
+  const clickDifficulty = async (id) => {
+    const pos = await page.evaluate(
+      (did) => window.game.scene.keys.Difficulty.cards.find((c) => c.id === did),
+      id,
+    )
+    await page.mouse.click(pos.x, pos.y)
+    await page.waitForTimeout(200)
+  }
+  await clickDifficulty('initiate')
+
   await page.waitForTimeout(700)
   const names = await page.evaluate(() => {
     const s = window.game.scene.keys.Battle
-    return { p: s.player.name, e: s.enemy.name, php: s.player.hp, pmax: s.player.d.maxHp }
+    return { p: s.player.name, e: s.enemy.name, php: s.player.hp, pmax: s.player.d.maxHp, tier: s.ai.tier.id }
   })
   check(
     'battle starts with the chosen matchup',
     names.p === 'Luke Skywalker' && names.e === 'Darth Vader',
     `${names.p} vs ${names.e}`,
   )
+  check('battle starts on the selected AI difficulty', names.tier === 'initiate', names.tier)
   await page.screenshot({ path: `${SHOTS}/02-battle-start.png` })
 
   const state = () =>
@@ -234,14 +252,18 @@ try {
   await page.keyboard.press('Enter')
   await page.waitForTimeout(800)
   const s5 = await state()
-  const rematchNames = await page.evaluate(() => {
+  const rematch = await page.evaluate(() => {
     const s = window.game.scene.keys.Battle
-    return `${s.player.name} vs ${s.enemy.name}`
+    return { names: `${s.player.name} vs ${s.enemy.name}`, tier: s.ai.tier.id }
   })
   check(
-    'ENTER rematch resets the fight with the same matchup',
-    s5.php === s5.pmax && s5.ehp === s5.emax && !s5.over && rematchNames === 'Luke Skywalker vs Darth Vader',
-    rematchNames,
+    'ENTER rematch resets the fight with the same matchup and difficulty',
+    s5.php === s5.pmax &&
+      s5.ehp === s5.emax &&
+      !s5.over &&
+      rematch.names === 'Luke Skywalker vs Darth Vader' &&
+      rematch.tier === 'initiate',
+    `${rematch.names}, ${rematch.tier}`,
   )
 
   await page.keyboard.press('Escape')
@@ -290,8 +312,17 @@ try {
     await tp.touchscreen.tap(pos.x, pos.y)
     await tp.waitForTimeout(200)
   }
+  const tapDifficulty = async (id) => {
+    const pos = await tp.evaluate(
+      (did) => window.game.scene.keys.Difficulty.cards.find((c) => c.id === did),
+      id,
+    )
+    await tp.touchscreen.tap(pos.x, pos.y)
+    await tp.waitForTimeout(200)
+  }
   await tapCard('han')
   await tapCard('chewbacca')
+  await tapDifficulty('initiate')
   await tp.waitForTimeout(700)
   await tp.screenshot({ path: `${SHOTS}/05-touch-ui.png` })
 
@@ -303,10 +334,12 @@ try {
     }),
   )
 
-  // Park the AI so hitstun can't interrupt the touch probes.
+  // Park the AI so hitstun can't interrupt the touch probes. Close enough
+  // that it's still within Han's bolt max range (430px) after the
+  // movement probe below nudges the player rightward.
   await tp.evaluate(() => {
     const s = window.game.scene.keys.Battle
-    s.enemy.body.reset(870, 430)
+    s.enemy.body.reset(700, 430)
     s.enemy.hitstun = 3000
   })
 

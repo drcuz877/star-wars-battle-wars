@@ -46,6 +46,7 @@ export class Fighter {
     this.swingT = -1 // ms since the current swing started; -1 = not swinging
     this.swingLanded = false
     this.cooldown = 0 // ms until the next attack is allowed
+    this.fireRoot = 0 // ms a blaster is planted after firing (anti-kite)
     this.hitstun = 0 // ms of stun remaining after being hit
     this.staminaPause = 0 // ms until stamina regen resumes
     this.blocking = false
@@ -106,7 +107,7 @@ export class Fighter {
     return new Phaser.Geom.Rectangle(cx - reach / 2, this.rect.y - 24, reach, 48)
   }
 
-  update(intents, dtMs) {
+  update(intents, dtMs, opponent) {
     if (this.ko) {
       this.weapon.setVisible(false)
       return
@@ -116,6 +117,7 @@ export class Fighter {
     this.staminaPause = Math.max(0, this.staminaPause - dtMs)
     this.dodgeCooldown = Math.max(0, this.dodgeCooldown - dtMs)
     this.barrierMs = Math.max(0, this.barrierMs - dtMs)
+    this.fireRoot = Math.max(0, this.fireRoot - dtMs)
     if (this.buffMs > 0) {
       this.buffMs -= dtMs
       if (this.buffMs <= 0) {
@@ -188,13 +190,25 @@ export class Fighter {
       this.blockHeldMs = this.blocking ? this.blockHeldMs + dtMs : 0
     }
 
-    // Movement is locked while blocking or mid-swing on the ground.
-    if (!this.blocking && !(this.swinging && this.onGround)) {
-      if (intents.left) this.body.setVelocityX(-this.d.moveSpeed)
-      else if (intents.right) this.body.setVelocityX(this.d.moveSpeed)
-      else if (this.onGround) this.body.setVelocityX(0)
+    // Just fired and still on the ground: planted for a beat (anti-kite —
+    // a blaster can't fire and full-speed retreat in the same instant).
+    const firePlanted = this.fireRoot > 0 && this.onGround
+
+    // Movement is locked while blocking, mid-swing on the ground, or planted
+    // after a shot.
+    if (!this.blocking && !(this.swinging && this.onGround) && !firePlanted) {
+      const dir = intents.left ? -1 : intents.right ? 1 : 0
+      if (dir !== 0) {
+        // Backpedaling (moving away from the opponent, i.e. opposite the way
+        // we're facing) is slower than advancing — this is what stops a
+        // blaster from firing and out-running a melee chaser forever.
+        const backpedal = dir === -this.facing
+        this.body.setVelocityX(dir * this.d.moveSpeed * (backpedal ? T.fighter.backpedalMult : 1))
+      } else if (this.onGround) {
+        this.body.setVelocityX(0)
+      }
       if (intents.jumpPressed && this.onGround) this.body.setVelocityY(-T.fighter.jumpVelocity)
-    } else if (this.blocking) {
+    } else if (this.blocking || firePlanted) {
       this.body.setVelocityX(0)
     }
 
@@ -206,8 +220,11 @@ export class Fighter {
     if (!this.swinging && !this.blocking && this.cooldown === 0) {
       if (wantsSpecial) startSpecial(this)
       else if (wantsAttack && this.stamina >= this.d.staminaCost) {
-        if (this.d.ranged) this.fireBolt()
-        else this.startSwing()
+        if (this.d.ranged) {
+          const dist = opponent ? Math.abs(opponent.rect.x - this.rect.x) : 0
+          if (dist <= T.bolt.maxRange) this.fireBolt()
+          else this.popup('OUT OF RANGE', '#ff8877', 14)
+        } else this.startSwing()
       }
     }
 
@@ -226,6 +243,7 @@ export class Fighter {
     this.cooldown = T.attack.windupMs + T.attack.activeMs + this.d.attackCooldownMs
     this.stamina -= this.d.staminaCost
     this.staminaPause = T.attack.windupMs + T.attack.activeMs + T.stamina.regenDelayMs
+    this.fireRoot = T.bolt.fireRootMs
     const x = this.rect.x + this.facing * (T.fighter.width / 2 + 12)
     const y = this.rect.y - 12
     this.scene.projectiles.spawn({
@@ -234,6 +252,7 @@ export class Fighter {
       y,
       vx: this.facing * T.bolt.speed,
       damage: this.d.boltDamage,
+      knockback: this.d.knockback * T.bolt.knockbackMult,
       color: this.character.boltColor ?? 0xff5533,
     })
     // Muzzle flash so the shot reads even before the bolt travels.
@@ -246,7 +265,15 @@ export class Fighter {
     this.dodgeT = 0
     this.dodgeCooldown = this.d.dodgeCooldownMs
     this.stamina -= T.dodge.staminaCost
-    this.body.setVelocityX(dir * T.dodge.speed)
+    // Dodging AWAY from the opponent (including the default no-direction
+    // back-hop) is slowed like ordinary backpedaling (2026-07-14 playtest
+    // fix) — otherwise it was a free, unpenalized full-speed escape that
+    // undid the anti-kite backpedal rule. The invulnerability frames still
+    // apply in full either way, so dodging away from an incoming swing is
+    // just as safe — it just no longer also re-opens a huge gap for free.
+    // Dodging TOWARD the opponent keeps full speed.
+    const backpedal = dir === -this.facing
+    this.body.setVelocityX(dir * T.dodge.speed * (backpedal ? T.fighter.backpedalMult : 1))
   }
 
   endSwing() {

@@ -3,7 +3,8 @@ import { TUNING as T } from '../combat/tuning.js'
 import { CHARACTERS, overall } from '../data/characters.js'
 import { Fighter } from '../combat/fighter.js'
 import { Projectiles } from '../combat/projectiles.js'
-import { SparAI } from '../combat/ai.js'
+import { TierAI } from '../combat/ai.js'
+import { tierById, DEFAULT_TIER_ID } from '../data/ai-tiers.js'
 import { KeyboardControls } from '../input/controls.js'
 import { TouchControls } from '../input/touch.js'
 import { Hud } from '../ui/hud.js'
@@ -23,6 +24,8 @@ export class BattleScene extends Phaser.Scene {
     if (data?.p2) this.p2Char = byId(data.p2) ?? this.p2Char
     this.p1Char = this.p1Char ?? byId('luke')
     this.p2Char = this.p2Char ?? byId('vader')
+    if (data?.difficulty) this.difficultyId = data.difficulty
+    this.difficultyId = this.difficultyId ?? DEFAULT_TIER_ID
   }
 
   create() {
@@ -76,7 +79,8 @@ export class BattleScene extends Phaser.Scene {
 
     this.keyboard = new KeyboardControls(this)
     this.touch = this.sys.game.device.input.touch ? new TouchControls(this) : null
-    this.ai = new SparAI()
+    const tier = tierById(this.difficultyId)
+    this.ai = new TierAI(tier)
 
     this.huds = [new Hud(this, this.player, 'left'), new Hud(this, this.enemy, 'right')]
 
@@ -115,6 +119,11 @@ export class BattleScene extends Phaser.Scene {
       fontSize: '10px',
       color: '#555577',
     })
+    this.add.text(24, 106, `AI: ${tier.label}`, {
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '10px',
+      color: '#8a8ab0',
+    })
 
     if (!this.touch) {
       const hint = this.add
@@ -151,8 +160,8 @@ export class BattleScene extends Phaser.Scene {
     let intents = this.keyboard.read()
     if (this.touch) intents = this.mergeIntents(intents, this.touch.read())
 
-    this.player.update(intents, delta)
-    this.enemy.update(this.ai.read(delta, this.enemy, this.player), delta)
+    this.player.update(intents, delta, this.enemy)
+    this.enemy.update(this.ai.read(delta, this.enemy, this.player), delta, this.player)
 
     this.resolveHits(this.player, this.enemy)
     this.resolveHits(this.enemy, this.player)
@@ -233,7 +242,7 @@ export class BattleScene extends Phaser.Scene {
 
     this.time.delayedCall(900, () => {
       this.makeEndOption(cx, cy + 52, 'REMATCH', () =>
-        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id }),
+        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id, difficulty: this.difficultyId }),
       )
       this.makeEndOption(cx, cy + 96, 'CHANGE CHARACTER', () => this.scene.start('Select'))
       this.add
@@ -245,7 +254,7 @@ export class BattleScene extends Phaser.Scene {
         .setOrigin(0.5)
         .setDepth(60)
       this.input.keyboard.once('keydown-ENTER', () =>
-        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id }),
+        this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id, difficulty: this.difficultyId }),
       )
       this.input.keyboard.once('keydown-C', () => this.scene.start('Select'))
     })
