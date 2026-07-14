@@ -22,9 +22,11 @@ const TORSO_W = 26, TORSO_H = 28
 const ARM_W = 10, ARM_H = 30
 const LEG_W = 10, LEG_H = 38
 const CAPE_W = 34, CAPE_H = 54
-const WPN_W = 10, WPN_H = 58
-const WPN_GRIP_Y = 46 // grip point inside the weapon texture (rotation pivot)
+const HILT_W = 8, HILT_H = 12
+const BLADE_W = 10, BLADE_H = 40
+const GLOW_W = 22, GLOW_H = 48
 const ARM_LEN = 26 // shoulder pivot -> hand
+const SHOULDER = { x: 4, y: -16 } // front-arm pivot in rig space
 
 // Small wrapper so painters draw in logical units; it multiplies by S.
 class Pen {
@@ -129,16 +131,25 @@ function drawCape(p, o) {
   p.poly([[10, 4], [24, 4], [29, 50], [5, 50]], o.shade ?? 0x000000, 0.25)
 }
 
-// Saber weapon: hilt + a simple blade in the character's lore color.
-// (The real glow/trail treatment is Segment 2 — this makes the blade exist.)
-function drawSaber(p, o, bladeColor) {
-  p.round(2, 2, 6, 39, 3, bladeColor, 0.3) // halo
-  p.round(3, 3, 4, 37, 2, bladeColor, 0.95) // blade
-  p.round(4, 4.5, 2, 33, 1, 0xffffff, 0.9) // hot core
-  p.round(3, 41, 4, 11, 1, o.hilt) // hilt
-  p.rect(3, 43.5, 4, 1.3, 0x14161c) // grip bands
-  p.rect(3, 46.5, 4, 1.3, 0x14161c)
-  p.rect(3.4, 41.8, 1.4, 1.4, 0xd03030) // activation stud
+// Saber weapon, three layers assembled in the wpn container: hilt (grip
+// point at the fighter's hand), blade (also baked alone so swing-trail
+// ghosts can reuse it), and a wide soft glow rendered additively.
+function drawHilt(p, o) {
+  p.round(2, 0.5, 4, 11, 1, o.hilt)
+  p.rect(2, 3, 4, 1.3, 0x14161c) // grip bands
+  p.rect(2, 6, 4, 1.3, 0x14161c)
+  p.rect(2.4, 1.2, 1.4, 1.4, 0xd03030) // activation stud
+}
+
+function drawBlade(p, color) {
+  p.round(3, 2, 4, 37, 2, color, 0.95)
+  p.round(4, 3.5, 2, 33, 1, 0xffffff, 0.9) // hot core
+}
+
+function drawGlow(p, color) {
+  p.round(3, 4, 16, 42, 8, color, 0.1)
+  p.round(6, 3, 10, 43, 5, color, 0.2)
+  p.round(8, 2, 6, 44, 3, color, 0.32)
 }
 
 function bake(scene, key, w, h, painter) {
@@ -172,7 +183,10 @@ export class Puppet {
     bake(scene, k('leg'), LEG_W, LEG_H, (p) => drawLeg(p, def.leg))
     if (def.cape) bake(scene, k('cape'), CAPE_W, CAPE_H, (p) => drawCape(p, def.cape))
     const bladeColor = fighter.character.saber?.colors?.[0] ?? 0xffffff
-    bake(scene, k('wpn'), WPN_W, WPN_H, (p) => drawSaber(p, def.weapon, bladeColor))
+    bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon))
+    bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor))
+    bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, bladeColor))
+    this.bladeKey = k('blade')
 
     const img = (part, ox, oy) =>
       scene.add.image(0, 0, k(part)).setScale(1 / S).setOrigin(ox, oy)
@@ -218,10 +232,16 @@ export class Puppet {
     this.head.add(img('head', 0.5, 1))
     this.rig.add(this.head)
 
-    this.armF = limb('arm', 4, -16, 2 / ARM_H)
+    this.armF = limb('arm', SHOULDER.x, SHOULDER.y, 2 / ARM_H)
+    // Weapon container pivots at the hand: glow behind, then blade, then
+    // hilt. Grip point is the container origin.
     this.wpn = scene.add.container(0, ARM_LEN)
-    this.wpn.add(img('wpn', 0.5, WPN_GRIP_Y / WPN_H))
+    this.glow = img('glow', 0.5, 1).setPosition(0, -3).setBlendMode(Phaser.BlendModes.ADD)
+    this.blade = img('blade', 0.5, 1).setPosition(0, -4)
+    this.hilt = img('hilt', 0.5, 0.5).setPosition(0, 0)
+    this.wpn.add([this.glow, this.blade, this.hilt])
     this.armF.add(this.wpn)
+    this.trailAccum = 0
 
     // Everything tintable, for hit flashes and the KO fade.
     this.images = []
@@ -258,6 +278,36 @@ export class Puppet {
       c[key] += ((target[key] ?? 0) - c[key]) * k
     }
 
+    // Blade hum: a slow shimmer on the additive glow.
+    this.glow.setAlpha(0.75 + Math.sin(this.scene.time.now / 140) * 0.15)
+
+    // Swing trail: while the swing can connect, drop fading additive
+    // ghosts of the blade along its arc (in rig space, so they mirror and
+    // travel with the fighter like classic fighting-game trails).
+    if (f.swinging && f.swingT >= T.attack.windupMs && !f.ko) {
+      this.trailAccum += dtMs || 16.7
+      if (this.trailAccum >= 15) {
+        this.trailAccum = 0
+        const rad = Phaser.Math.DegToRad(c.armF)
+        const hx = SHOULDER.x - Math.sin(rad) * ARM_LEN
+        const hy = SHOULDER.y + Math.cos(rad) * ARM_LEN
+        const ghost = this.scene.add
+          .image(hx, hy, this.bladeKey)
+          .setScale(1 / S)
+          .setOrigin(0.5, 1)
+          .setAngle(c.armF + c.wpn)
+          .setAlpha(0.4)
+          .setBlendMode(Phaser.BlendModes.ADD)
+        this.rig.add(ghost)
+        this.scene.tweens.add({
+          targets: ghost,
+          alpha: 0,
+          duration: 140,
+          onComplete: () => ghost.destroy(),
+        })
+      }
+    } else this.trailAccum = 15 // first active frame always drops a ghost
+
     this.armF.angle = c.armF
     this.armB.angle = c.armB
     this.legF.angle = c.legF
@@ -293,5 +343,8 @@ export class Puppet {
 
   setKo() {
     for (const i of this.images) i.setTint(0x8890a8)
+    // The saber switches off when its owner goes down.
+    this.blade.setVisible(false)
+    this.glow.setVisible(false)
   }
 }

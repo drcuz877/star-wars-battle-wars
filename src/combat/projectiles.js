@@ -14,6 +14,7 @@ export class Projectiles {
   spawn(opts) {
     const w = opts.width ?? T.bolt.width
     const h = opts.height ?? T.bolt.height
+    const color = opts.color ?? 0xff4444
     const bolt = {
       owner: opts.owner,
       x: opts.x,
@@ -32,10 +33,47 @@ export class Projectiles {
       traveled: 0,
       flipped: false,
       dodgedBy: new Set(),
-      rect: this.scene.add.rectangle(opts.x, opts.y, w, h, opts.color ?? 0xff4444).setDepth(20),
+      color,
+      trailT: 0,
+      // The rectangle is still the collision bounds; the additive halo
+      // around it is pure dressing.
+      rect: this.scene.add.rectangle(opts.x, opts.y, w, h, color).setDepth(20),
+      glow: this.scene.add
+        .ellipse(opts.x, opts.y, w * 2.1, h * 3.4, color, 0.5)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(19),
     }
     this.bolts.push(bolt)
     return bolt
+  }
+
+  // Impact burst where a bolt lands: a bright flash plus a few sparks
+  // thrown back against the bolt's direction of travel.
+  burst(x, y, color, vx, big = true) {
+    const flash = this.scene.add
+      .circle(x, y, big ? 10 : 6, 0xffffff, 0.9)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(40)
+    this.scene.tweens.add({ targets: flash, alpha: 0, scale: 2.2, duration: 130, onComplete: () => flash.destroy() })
+    const n = big ? 6 : 3
+    const back = (vx || 1) > 0 ? Math.PI : 0 // sparks fly back the way the bolt came
+    for (let i = 0; i < n; i++) {
+      const ang = back + (Math.random() - 0.5) * 2.2
+      const dist = 16 + Math.random() * 22
+      const spark = this.scene.add
+        .circle(x, y, 1.6 + Math.random(), color)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(40)
+      this.scene.tweens.add({
+        targets: spark,
+        x: x + Math.cos(ang) * dist,
+        y: y + Math.sin(ang) * dist - Math.random() * 10,
+        alpha: 0,
+        duration: 200 + Math.random() * 120,
+        ease: 'Quad.easeOut',
+        onComplete: () => spark.destroy(),
+      })
+    }
   }
 
   update(dtMs, fighters) {
@@ -55,6 +93,18 @@ export class Projectiles {
       bolt.y += bolt.vy * dt
       bolt.traveled += Math.abs(bolt.vx) * dt
       bolt.rect.setPosition(bolt.x, bolt.y)
+      bolt.glow.setPosition(bolt.x, bolt.y)
+
+      // Fading afterimages sell the bolt's speed.
+      bolt.trailT += dtMs
+      if (bolt.trailT >= 36) {
+        bolt.trailT = 0
+        const ghost = this.scene.add
+          .ellipse(bolt.x, bolt.y, bolt.rect.width * 1.4, bolt.rect.height * 1.8, bolt.color, 0.25)
+          .setBlendMode(Phaser.BlendModes.ADD)
+          .setDepth(18)
+        this.scene.tweens.add({ targets: ghost, alpha: 0, duration: 150, onComplete: () => ghost.destroy() })
+      }
 
       const bounds = bolt.rect.getBounds()
       for (const f of fighters) {
@@ -80,6 +130,9 @@ export class Projectiles {
           bolt.returning = false
           bolt.dodgedBy.clear()
           bolt.rect.setFillStyle(0x66ffff)
+          bolt.glow.setFillStyle(0x66ffff, 0.5)
+          bolt.color = 0x66ffff
+          this.burst(bolt.x, bolt.y, 0x66ffff, bolt.vx, false)
           f.popup('DEFLECT', '#66ffff')
           continue
         }
@@ -98,6 +151,7 @@ export class Projectiles {
           ranged: true,
           charges: !bolt.fromSpecial,
         })
+        this.burst(bolt.x, bolt.y, bolt.color, bolt.vx)
         bolt.dead = true
       }
 
@@ -109,7 +163,10 @@ export class Projectiles {
     }
 
     this.bolts = this.bolts.filter((b) => {
-      if (b.dead) b.rect.destroy()
+      if (b.dead) {
+        b.rect.destroy()
+        b.glow.destroy()
+      }
       return !b.dead
     })
   }

@@ -69,6 +69,54 @@ function slashFlash(f, color) {
   f.scene.tweens.add({ targets: slash, alpha: 0, duration: 160, onComplete: () => slash.destroy() })
 }
 
+// Force Push: translucent shock arcs race from the caster's palm to the
+// target, then a burst lands.
+function pushWave(f, opp) {
+  const scene = f.scene
+  const x0 = f.rect.x + f.facing * (T.fighter.width / 2 + 8)
+  const y0 = f.rect.y - 14
+  for (let i = 0; i < 3; i++) {
+    scene.time.delayedCall(i * 60, () => {
+      const arc = scene.add
+        .ellipse(x0, y0, 12, 34 + i * 8)
+        .setStrokeStyle(3, 0xcfe4ff, 0.85)
+        .setBlendMode(Phaser.BlendModes.ADD)
+        .setDepth(35)
+      scene.tweens.add({
+        targets: arc,
+        x: opp.rect.x,
+        scaleY: 1.7,
+        alpha: 0,
+        duration: 240,
+        ease: 'Quad.easeOut',
+        onComplete: () => arc.destroy(),
+      })
+    })
+  }
+  scene.time.delayedCall(200, () => ringBurst(scene, opp.rect.x, opp.rect.y - 10, 0x9fc4ff, 2.5))
+}
+
+// Force Choke / Freeze: rings CONTRACT around the held target instead of
+// bursting outward — the squeeze, not the shove.
+function gripSqueeze(scene, opp) {
+  for (let i = 0; i < 2; i++) {
+    scene.time.delayedCall(i * 130, () => {
+      const ring = scene.add
+        .circle(opp.rect.x, opp.rect.y - 18, 40)
+        .setStrokeStyle(4, 0xb46bff, 0.9)
+        .setDepth(40)
+      scene.tweens.add({
+        targets: ring,
+        scale: 0.3,
+        alpha: 0.15,
+        duration: 330,
+        ease: 'Quad.easeIn',
+        onComplete: () => ring.destroy(),
+      })
+    })
+  }
+}
+
 function ringBurst(scene, x, y, color, scale = 4) {
   const ring = scene.add.circle(x, y, 24).setStrokeStyle(5, color).setDepth(40)
   scene.tweens.add({
@@ -151,7 +199,12 @@ const TEMPLATES = {
         f.popup('WHIFF', '#8a8ab0', 14)
         return
       }
-      ringBurst(f.scene, opp.rect.x, opp.rect.y - 10, 0xb46bff, 3)
+      // Same mechanic, three visual flavors: a blaster user's stun shot
+      // flashes gold at the target; a Force shove sends wave arcs across;
+      // a zero-knockback hold squeezes rings inward around the victim.
+      if (f.d.ranged) ringBurst(f.scene, opp.rect.x, opp.rect.y - 10, 0xffd24a, 2)
+      else if ((cfg.knockback ?? 0) > 0) pushWave(f, opp)
+      else gripSqueeze(f.scene, opp)
       opp.applyHit({
         charges: false,
         attacker: f,

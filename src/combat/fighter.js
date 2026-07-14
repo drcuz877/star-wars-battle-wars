@@ -264,7 +264,10 @@ export class Fighter {
       color: this.character.boltColor ?? 0xff5533,
     })
     // Muzzle flash so the shot reads even before the bolt travels.
-    const flash = this.scene.add.circle(x, y, 7, 0xffdd88).setDepth(21)
+    const flash = this.scene.add
+      .circle(x, y, 7, 0xffdd88)
+      .setBlendMode(Phaser.BlendModes.ADD)
+      .setDepth(21)
     this.scene.tweens.add({ targets: flash, alpha: 0, scale: 0.3, duration: 110, onComplete: () => flash.destroy() })
   }
 

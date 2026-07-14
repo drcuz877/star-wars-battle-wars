@@ -112,5 +112,26 @@ for (let i = 0; i < 20; i++) {
 await page.waitForTimeout(600)
 await shot('08-ko')
 
+// --- Second scenario: blaster VFX (bolt glow/trail + impact burst) ---
+await page.goto(URL)
+await page.waitForSelector('canvas', { timeout: 10000 })
+await page.waitForTimeout(900)
+await click('Select', 'han')
+await click('Select', 'vader')
+await click('Difficulty', 'initiate')
+await page.waitForTimeout(700)
+await page.evaluate(() => {
+  const s = window.game.scene.keys.Battle
+  s.player.body.reset(340, 430)
+  s.enemy.body.reset(700, 430)
+  s.enemy.hitstun = 60000
+})
+await page.waitForTimeout(300)
+await page.keyboard.press('a', { delay: 60 })
+await page.waitForTimeout(240)
+await shot('09-bolt-flight')
+await page.waitForTimeout(320)
+await shot('10-bolt-impact')
+
 await browser.close()
 console.log(`poses written to ${OUT}/`)
