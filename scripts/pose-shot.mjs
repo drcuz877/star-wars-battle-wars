@@ -151,7 +151,7 @@ await page.keyboard.press('d', { delay: 60 })
 await page.waitForTimeout(130)
 await shot('10b-dodge')
 
-// --- Boba Fett: exercises the mandoArmor/mandoHelmet painters in battle ---
+// --- Roster sweep: every arted matchup, exercising all part painters ---
 await page.goto(URL)
 await page.waitForSelector('canvas', { timeout: 10000 })
 await page.waitForTimeout(900)
@@ -160,6 +160,23 @@ await click('Select', 'luke')
 await click('Difficulty', 'initiate')
 await page.waitForTimeout(900)
 await shot('12-boba')
+const matchups = [
+  ['yoda', 'maul'],
+  ['ahsoka', 'kylo'],
+  ['obiwan', 'dooku'],
+  ['palpatine', 'quigon'],
+  ['rey', 'ventress'],
+  ['mace', 'inquisitor'],
+  ['anakin', 'vader'],
+]
+for (const [p1, p2] of matchups) {
+  await page.evaluate(
+    ([a, b]) => window.game.scene.keys.Battle.scene.restart({ p1: a, p2: b, difficulty: 'initiate' }),
+    [p1, p2],
+  )
+  await page.waitForTimeout(800)
+  await shot(`13-${p1}-vs-${p2}`)
+}
 
 // --- Third scenario: capture each arena backdrop (restart until both seen) ---
 const seen = new Set()

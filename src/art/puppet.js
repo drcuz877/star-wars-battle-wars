@@ -57,17 +57,88 @@ class Pen {
 // ---------------------------------------------------------------------------
 
 const HEADS = {
-  // Generic human head: skin + hair colors from the definition.
+  // Generic human head. Options: hair color (omit/null = bald), beard
+  // color, long: true for shoulder-length side hair.
   human(p, o) {
     p.rect(10.5, 19, 5, 5, o.skin) // neck
-    p.ellipse(13, 10, 21, 16, o.hair) // hair mass behind the face
+    if (o.hair) p.ellipse(13, 10, 21, 16, o.hair) // hair mass behind the face
     p.round(6, 7, 14, 15, 4, o.skin) // face
-    p.ellipse(13, 6, 18, 7, o.hair) // fringe over the forehead
-    p.rect(5.5, 6, 3.5, 10, o.hair) // sideburn, far side
-    p.rect(17, 6, 3.5, 8, o.hair) // sideburn, near side
+    if (o.hair) {
+      p.ellipse(13, 6, 18, 7, o.hair) // fringe over the forehead
+      p.rect(5.5, 6, 3.5, o.long ? 16 : 10, o.hair) // side hair, far
+      p.rect(17, 6, 3.5, o.long ? 15 : 8, o.hair) // side hair, near
+    }
+    if (o.beard) {
+      p.round(7.5, 16, 11, 6, 2.5, o.beard)
+      p.rect(9, 14.5, 1.6, 3, o.beard) // jawline up the cheeks
+      p.rect(15.4, 14.5, 1.6, 3, o.beard)
+    }
     p.rect(10.2, 13, 2, 2.4, 0x232730) // eyes (toward the facing side)
     p.rect(15, 13, 2, 2.4, 0x232730)
-    p.rect(10.8, 18.2, 4.4, 1.1, 0xc09070) // mouth line
+    if (!o.beard) p.rect(10.8, 18.2, 4.4, 1.1, 0xc09070) // mouth line
+  },
+
+  // Yoda: green skin, winged ears, white wisps. Pair with def.scale.
+  yoda(p, o) {
+    p.rect(10.5, 19.5, 5, 4.5, o.skin)
+    p.poly([[0.5, 8], [7, 11], [7, 15], [1, 13]], o.skin) // ears stick out
+    p.poly([[25.5, 8], [19, 11], [19, 15], [25, 13]], o.skin)
+    p.ellipse(13, 13, 16, 14, o.skin)
+    p.ellipse(13, 7.5, 9, 4, 0xe8e4da, 0.6) // white wisps
+    p.rect(9.6, 11.5, 2.4, 2.6, 0x2a3020)
+    p.rect(14, 11.5, 2.4, 2.6, 0x2a3020)
+    p.rect(11, 16.8, 4, 1, 0x5a7040)
+  },
+
+  // Togruta (Ahsoka): striped montrals + lekku framing the face, white
+  // facial markings.
+  togruta(p, o) {
+    const bone = 0xe8e6e0
+    p.poly([[2.5, 1.5], [8, 5], [7.5, 12], [2, 9]], bone) // left montral
+    p.poly([[23.5, 1.5], [18, 5], [18.5, 12], [24, 9]], bone)
+    p.round(3, 8, 5, 16, 2, bone) // lekku tails down both sides
+    p.round(18, 8, 5, 16, 2, bone)
+    p.rect(3, 11, 20, 2.2, o.stripe) // stripes across montrals + lekku
+    p.rect(3, 16, 5, 2.2, o.stripe)
+    p.rect(18, 16, 5, 2.2, o.stripe)
+    p.rect(3.5, 3.5, 4, 2, o.stripe)
+    p.rect(18.5, 3.5, 4, 2, o.stripe)
+    p.round(7.5, 6.5, 11, 15, 4, o.skin) // face
+    p.poly([[13, 7.2], [14.8, 9.6], [13, 12], [11.2, 9.6]], 0xf2eee6) // forehead diamond
+    p.ellipse(9.8, 15.5, 2.2, 1.8, 0xf2eee6) // cheek marks
+    p.ellipse(16.2, 15.5, 2.2, 1.8, 0xf2eee6)
+    p.rect(10.3, 13, 2, 2.4, 0x2a3040)
+    p.rect(13.9, 13, 2, 2.4, 0x2a3040)
+    p.rect(11, 18.4, 4, 1, 0xa05038)
+  },
+
+  // Zabrak/Pau'an family (Maul, Grand Inquisitor): patterned face,
+  // optional horn crown, colored eyes.
+  zabrak(p, o) {
+    p.rect(10.5, 19, 5, 5, o.skin)
+    p.ellipse(13, 13, 19, 17, o.skin)
+    p.poly([[13, 8], [15.5, 5.5], [13, 10.5], [10.5, 5.5]], o.marks) // brow V
+    p.rect(7.5, 10, 2.2, 6, o.marks) // cheek stripes
+    p.rect(16.3, 10, 2.2, 6, o.marks)
+    p.round(11, 16.5, 4, 4.5, 1.5, o.marks) // chin patch
+    if (o.horns) {
+      p.poly([[12, 4.5], [13, 1], [14, 4.5]], o.hornColor ?? 0x8a8074) // crown
+      p.poly([[7.5, 6.5], [8, 3.5], [9.8, 6]], o.hornColor ?? 0x8a8074)
+      p.poly([[16.2, 6], [18, 3.5], [18.5, 6.5]], o.hornColor ?? 0x8a8074)
+    }
+    p.rect(10, 12.5, 2.2, 2.4, o.eyes ?? 0xd8b020)
+    p.rect(13.8, 12.5, 2.2, 2.4, o.eyes ?? 0xd8b020)
+  },
+
+  // Deep hood with a gaunt face inside (Palpatine).
+  hooded(p, o) {
+    p.poly([[13, 0.5], [21, 7], [5, 7]], o.hood) // hood peak
+    p.ellipse(13, 13, 24, 21, o.hood) // hood body
+    p.ellipse(13, 14, 15, 15, 0x060608) // interior shadow
+    p.round(9, 9.5, 8, 11, 3, o.skin) // gaunt face
+    p.rect(10.2, 13, 2, 2, 0x16161c) // sunken eyes
+    p.rect(13.8, 13, 2, 2, 0x16161c)
+    p.rect(11, 17.8, 4, 1, 0x8a7060)
   },
 
   // Wookiee: all fur, lighter muzzle, dark nose (Chewbacca).
@@ -216,16 +287,24 @@ function drawCape(p, o) {
 // Saber weapon, three layers assembled in the wpn container: hilt (grip
 // point at the fighter's hand), blade (also baked alone so swing-trail
 // ghosts can reuse it), and a wide soft glow rendered additively.
-function drawHilt(p, o) {
+function drawHilt(p, o, style) {
   p.round(2, 0.5, 4, 11, 1, o.hilt)
   p.rect(2, 3, 4, 1.3, 0x14161c) // grip bands
   p.rect(2, 6, 4, 1.3, 0x14161c)
   p.rect(2.4, 1.2, 1.4, 1.4, 0xd03030) // activation stud
+  if (style === 'curved') p.poly([[2, 9.5], [6, 10], [7.5, 11.8], [2.5, 11.8]], o.hilt) // Dooku's hooked pommel
+  if (style === 'crossguard') p.rect(0.5, 0.5, 7, 1.6, o.hilt) // quillon housing
 }
 
-function drawBlade(p, color) {
+function drawBlade(p, color, style) {
   p.round(3, 2, 4, 37, 2, color, 0.95)
   p.round(4, 3.5, 2, 33, 1, 0xffffff, 0.9) // hot core
+  if (style === 'crossguard') {
+    p.rect(0, 33.5, 3.2, 2.4, color, 0.95) // side vents (Kylo)
+    p.rect(6.8, 33.5, 3.2, 2.4, color, 0.95)
+    p.rect(0.5, 34.1, 2.2, 1.1, 0xffffff, 0.85)
+    p.rect(7.3, 34.1, 2.2, 1.1, 0xffffff, 0.85)
+  }
 }
 
 function drawGlow(p, color) {
@@ -290,10 +369,11 @@ export class Puppet {
     if (def.cape) bake(scene, k('cape'), CAPE_W, CAPE_H, (p) => drawCape(p, def.cape))
 
     this.weaponType = def.weapon?.type ?? 'saber'
+    this.saberStyle = fighter.character.saber?.style ?? 'single'
     if (this.weaponType === 'saber') {
       const bladeColor = fighter.character.saber?.colors?.[0] ?? 0xffffff
-      bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon))
-      bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor))
+      bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon, this.saberStyle))
+      bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor, this.saberStyle))
       bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, bladeColor))
       this.bladeKey = k('blade')
     } else if (this.weaponType === 'pistol') {
@@ -303,17 +383,22 @@ export class Puppet {
     const img = (part, ox, oy) =>
       scene.add.image(0, 0, k(part)).setScale(1 / S).setOrigin(ox, oy)
 
+    // Small-stature characters (Yoda, Grogu): the whole rig scales down,
+    // anchored at the feet. The PHYSICS rect is untouched — hitboxes are
+    // identical for the whole roster, this is purely visual.
+    this.bodyScale = def.scale ?? 1
+
     // Ground marker: a soft shadow that doubles as the state "tell" ring
     // (replaces the old rectangle outline colors — gold special-ready, cyan
     // block, etc.). Separate from the body so it never flips or rotates.
     this.aura = scene.add
-      .ellipse(fighter.rect.x, T.arena.groundY + 5, 58, 12, 0x000000, 0.28)
+      .ellipse(fighter.rect.x, T.arena.groundY + 5, 58 * this.bodyScale, 12 * this.bodyScale, 0x000000, 0.28)
       .setDepth(9)
 
     // root: physics position + facing flip + KO rotation.
     // rig: pose-only offsets (bob, lean) so physics stays untouched.
     this.root = scene.add.container(fighter.rect.x, fighter.rect.y).setDepth(12)
-    this.rig = scene.add.container(0, 0)
+    this.rig = scene.add.container(0, 0).setScale(this.bodyScale)
     this.root.add(this.rig)
 
     this.cape = null
@@ -350,15 +435,40 @@ export class Puppet {
     // the gun. Brawlers: an empty container (fists), so animator wpn
     // angles are harmless no-ops.
     this.wpn = scene.add.container(0, ARM_LEN)
-    this.glow = null
-    this.blade = null
+    this.blades = [] // every live blade+glow, for KO switch-off / shimmer
+    this.glows = []
+    // Adds one blade+glow pair to a hand container; flip=true points it
+    // DOWN from the grip (the second end of a double-bladed staff).
+    const saberInto = (cont, flip = false) => {
+      const glow = img('glow', 0.5, 1).setBlendMode(Phaser.BlendModes.ADD)
+      const blade = img('blade', 0.5, 1)
+      if (flip) {
+        glow.setPosition(0, 3).setAngle(180)
+        blade.setPosition(0, 4).setAngle(180)
+      } else {
+        glow.setPosition(0, -3)
+        blade.setPosition(0, -4)
+      }
+      cont.add([glow, blade])
+      this.glows.push(glow)
+      this.blades.push(blade)
+    }
     if (this.weaponType === 'saber') {
-      this.glow = img('glow', 0.5, 1).setPosition(0, -3).setBlendMode(Phaser.BlendModes.ADD)
-      this.blade = img('blade', 0.5, 1).setPosition(0, -4)
-      this.wpn.add([this.glow, this.blade, img('hilt', 0.5, 0.5)])
+      saberInto(this.wpn)
+      if (this.saberStyle === 'double') saberInto(this.wpn, true) // Maul/Inquisitor staff
+      this.wpn.add(img('hilt', 0.5, 0.5))
+      if (this.saberStyle === 'twin') {
+        // Second saber in the off hand (Ahsoka, Ventress), held at a
+        // fixed angle — the back arm's own motion animates it.
+        this.wpnB = scene.add.container(0, ARM_LEN).setAngle(168)
+        saberInto(this.wpnB)
+        this.wpnB.add(img('hilt', 0.5, 0.5))
+        this.armB.add(this.wpnB)
+      }
     } else if (this.weaponType === 'pistol') {
       this.wpn.add(img('pistol', 0.5, 15 / PISTOL_H))
     }
+    this.blade = this.blades[0] ?? null // front blade: trail source
     this.armF.add(this.wpn)
     this.trailAccum = 0
 
@@ -397,8 +507,9 @@ export class Puppet {
       c[key] += ((target[key] ?? 0) - c[key]) * k
     }
 
-    // Blade hum: a slow shimmer on the additive glow (sabers only).
-    if (this.glow) this.glow.setAlpha(0.75 + Math.sin(this.scene.time.now / 140) * 0.15)
+    // Blade hum: a slow shimmer on the additive glows (sabers only).
+    const hum = 0.75 + Math.sin(this.scene.time.now / 140) * 0.15
+    for (const glow of this.glows) glow.setAlpha(hum)
 
     // Swing trail: while the swing can connect, drop fading additive
     // ghosts of the blade along its arc (in rig space, so they mirror and
@@ -433,7 +544,9 @@ export class Puppet {
     this.legB.angle = c.legB
     this.head.angle = c.head
     this.wpn.angle = c.wpn
-    this.rig.y = c.rigY
+    // Feet-anchored: a scaled-down rig sits lower so its feet still touch
+    // the ground line (rect center is 40 above the ground).
+    this.rig.y = (T.fighter.height / 2) * (1 - this.bodyScale) + c.rigY * this.bodyScale
     this.rig.angle = c.rigAng
     if (this.cape) this.cape.angle = c.cape
 
@@ -462,8 +575,8 @@ export class Puppet {
 
   setKo() {
     for (const i of this.images) i.setTint(0x8890a8)
-    // The saber switches off when its owner goes down.
-    this.blade?.setVisible(false)
-    this.glow?.setVisible(false)
+    // The sabers switch off when their owner goes down.
+    for (const b of this.blades) b.setVisible(false)
+    for (const g of this.glows) g.setVisible(false)
   }
 }
