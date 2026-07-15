@@ -21,6 +21,13 @@ await page.waitForTimeout(900)
 
 const shot = (name) => page.screenshot({ path: `${OUT}/${name}.png` })
 
+// The opening crawl runs on every page load; click dead space to skip.
+const skipCrawl = async () => {
+  await page.waitForTimeout(500)
+  await page.mouse.click(10, 250)
+  await page.waitForTimeout(800)
+}
+
 const click = async (scene, id) => {
   const pos = await page.evaluate(
     ([s, cid]) => window.game.scene.keys[s].cards.find((c) => c.id === cid),
@@ -29,6 +36,9 @@ const click = async (scene, id) => {
   await page.mouse.click(pos.x, pos.y)
   await page.waitForTimeout(250)
 }
+await page.waitForTimeout(4200) // into the gold-crawl phase
+await shot('000-crawl')
+await skipCrawl()
 await shot('00-select')
 await click('Select', 'luke')
 await click('Select', 'vader')
@@ -128,6 +138,7 @@ await shot('08b-end-menu')
 await page.goto(URL)
 await page.waitForSelector('canvas', { timeout: 10000 })
 await page.waitForTimeout(900)
+await skipCrawl()
 await click('Select', 'han')
 await click('Select', 'chewbacca')
 await click('Difficulty', 'initiate')
@@ -155,6 +166,7 @@ await shot('10b-dodge')
 await page.goto(URL)
 await page.waitForSelector('canvas', { timeout: 10000 })
 await page.waitForTimeout(900)
+await skipCrawl()
 await click('Select', 'boba')
 await click('Select', 'luke')
 await click('Difficulty', 'initiate')

@@ -16,6 +16,15 @@ const check = (name, ok, detail = '') => {
   console.log(`${ok ? '  PASS' : '! FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
 
+// The opening crawl runs on every load; a click/tap in dead space (no
+// card lives at 10,250) skips it through to character select.
+const skipCrawl = async (p, touch = false) => {
+  await p.waitForTimeout(500)
+  if (touch) await p.touchscreen.tap(10, 250)
+  else await p.mouse.click(10, 250)
+  await p.waitForTimeout(800)
+}
+
 const server = spawn('npm', ['run', 'preview', '--', '--port', '4173', '--strictPort'], {
   shell: true,
   stdio: 'ignore',
@@ -37,6 +46,12 @@ try {
   await page.goto(URL)
   await page.waitForSelector('canvas', { timeout: 10000 })
   await page.waitForTimeout(900)
+  const crawlShown = await page.evaluate(() => window.game.scene.isActive('Crawl'))
+  await skipCrawl(page)
+  check(
+    'opening crawl plays on load and skips to character select',
+    crawlShown && (await page.evaluate(() => window.game.scene.isActive('Select'))),
+  )
   await page.screenshot({ path: `${SHOTS}/01-select-screen.png` })
 
   // --- Character select: pick Luke, then Vader, via real clicks on cards.
@@ -316,6 +331,7 @@ try {
   await tp.goto(URL)
   await tp.waitForSelector('canvas', { timeout: 10000 })
   await tp.waitForTimeout(900)
+  await skipCrawl(tp, true)
 
   const tapCard = async (id) => {
     const pos = await tp.evaluate(
@@ -404,6 +420,7 @@ try {
   await hp.goto(URL)
   await hp.waitForSelector('canvas', { timeout: 10000 })
   await hp.waitForTimeout(900)
+  await skipCrawl(hp)
 
   const hscale = await hp.evaluate(() => window.game.scale.width / 960)
   check('high-DPI: canvas backing store is upscaled', hscale > 1, `scale ${hscale}`)

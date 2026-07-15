@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { TUNING as T } from './combat/tuning.js'
 import { validateCharacters } from './data/characters.js'
 import { RENDER_SCALE } from './util/display.js'
+import { CrawlScene } from './scenes/CrawlScene.js'
 import { SelectScene } from './scenes/SelectScene.js'
 import { DifficultyScene } from './scenes/DifficultyScene.js'
 import { BattleScene } from './scenes/BattleScene.js'
@@ -35,7 +36,7 @@ const game = new Phaser.Game({
     width: T.arena.width * RENDER_SCALE,
     height: T.arena.height * RENDER_SCALE,
   },
-  scene: [SelectScene, DifficultyScene, BattleScene, PauseScene],
+  scene: [CrawlScene, SelectScene, DifficultyScene, BattleScene, PauseScene],
 })
 
 // Handle for debugging and automated verification scripts.
