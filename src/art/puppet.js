@@ -81,6 +81,11 @@ const HEADS = {
     p.rect(15, 13, 2, 2.4, 0x232730)
     if (!o.beard) p.rect(10.8, 18.2, 4.4, 1.1, 0xc09070) // mouth line
     if (o.mustache) p.rect(9.8, 16.9, 6.4, 1.5, o.mustache) // (Lando)
+    if (o.tiara) {
+      p.rect(6.5, 5, 13, 1.9, o.tiara) // royal headband (Padmé)
+      p.ellipse(13, 5.9, 3.2, 3.2, o.tiara) // center jewel mount
+      p.ellipse(13, 5.9, 1.6, 1.6, 0xf4e8c8)
+    }
   },
 
   // Duros under a wide-brim hat (Cad Bane): blue skin, red eyes.
@@ -250,6 +255,17 @@ const TORSOS = {
     p.rect(17.4, 20, 3.5, 2.6, o.box ?? 0x8a8578)
   },
 
+  // Royal gown bodice: trimmed neckline, center panel, waist sash
+  // (Padmé). Pair with leg type 'gown' for the flowing skirt.
+  gown(p, o) {
+    p.round(1.5, 0.5, 23, 6.5, 2.5, o.cloth) // capped shoulders
+    p.round(3, 1, 20, 25, 3, o.cloth)
+    p.poly([[3, 24], [23, 24], [26, 27.5], [0, 27.5]], o.cloth) // hip flare
+    p.rect(7, 1.6, 12, 2, o.trim) // neckline
+    p.poly([[13, 4.5], [15.8, 12], [13, 19.5], [10.2, 12]], o.trim, 0.55) // center panel
+    p.rect(3, 17.5, 20, 3, o.trim) // waist sash
+  },
+
   // Full-body fur with a bandolier (Chewbacca).
   furry(p, o) {
     p.round(2.5, 0.5, 21, 26, 4, o.fur)
@@ -304,6 +320,13 @@ const LEGS = {
     p.round(1.5, 1, 7, 31, 3, o.fur)
     p.rect(3, 5, 2, 18, o.shade, 0.45)
     p.ellipse(5.5, 33, 8, 5, o.fur) // furry foot
+  },
+  // Flowing skirt panel: the two "legs" become halves of a floor-length
+  // gown that sway with the walk cycle (Padmé).
+  gown(p, o) {
+    p.poly([[3.2, 1], [6.8, 1], [9.8, 33.5], [0.2, 33.5]], o.cloth)
+    p.rect(0.5, 31.5, 9, 2.6, o.trim ?? o.cloth) // hem band
+    p.rect(4.2, 4, 1.6, 25, o.sheen ?? 0xffffff, 0.12) // fabric sheen
   },
 }
 
@@ -521,7 +544,7 @@ export class Puppet {
     }
 
     // Current pose (lerped toward the animator's target each frame).
-    this.cur = { armF: -22, armB: 12, legF: 0, legB: 0, head: 0, wpn: 168, rigY: 0, rigAng: 0, cape: 0 }
+    this.cur = { armF: -22, armB: 12, legF: 0, legB: 0, head: 0, wpn: 168, wpnB: 168, rigY: 0, rigAng: 0, cape: 0 }
     this.tintMode0 = this.images[0]?.tintMode ?? 0
 
     // Sync on the scene's post-update, not from fighter.update(): the
@@ -545,8 +568,15 @@ export class Puppet {
     // everything else eases for a fluid look.
     const k = target.snap ? 1 : 1 - Math.exp(-(dtMs || 16.7) / 70)
     const c = this.cur
-    for (const key of ['armF', 'armB', 'legF', 'legB', 'head', 'wpn', 'rigY', 'rigAng', 'cape']) {
-      c[key] += ((target[key] ?? 0) - c[key]) * k
+    for (const key of ['armF', 'armB', 'legF', 'legB', 'head', 'wpn', 'wpnB', 'rigY', 'rigAng', 'cape']) {
+      const tv = target[key] ?? 0
+      // Weapon angles wrap: after a staff twirl (Maul) the blade ends a
+      // full turn away numerically — step to the equivalent angle instead
+      // of visibly unwinding 360° on the way back to rest.
+      if ((key === 'wpn' || key === 'wpnB') && Math.abs(tv - c[key]) > 180) {
+        c[key] += Math.sign(tv - c[key]) * 360
+      }
+      c[key] += (tv - c[key]) * k
     }
 
     // Blade hum: a slow shimmer on the additive glows (sabers only).
@@ -586,6 +616,7 @@ export class Puppet {
     this.legB.angle = c.legB
     this.head.angle = c.head
     this.wpn.angle = c.wpn
+    if (this.wpnB) this.wpnB.angle = c.wpnB
     // Feet-anchored: a scaled-down rig sits lower so its feet still touch
     // the ground line (rect center is 40 above the ground).
     this.rig.y = (T.fighter.height / 2) * (1 - this.bodyScale) + c.rigY * this.bodyScale

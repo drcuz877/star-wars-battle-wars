@@ -161,12 +161,8 @@ await click('Difficulty', 'initiate')
 await page.waitForTimeout(900)
 await shot('12-boba')
 const matchups = [
-  ['yoda', 'maul'],
-  ['grogu', 'grievous'],
-  ['din', 'jango'],
-  ['bokatan', 'cadbane'],
-  ['leia', 'lando'],
-  ['padme', 'finn'],
+  ['padme', 'leia'],
+  ['yoda', 'grogu'],
 ]
 for (const [p1, p2] of matchups) {
   await page.evaluate(
@@ -177,9 +173,30 @@ for (const [p1, p2] of matchups) {
   await shot(`13-${p1}-vs-${p2}`)
 }
 
+// Mid-swing captures: Maul's staff twirl, Grievous's two-saber slash.
+for (const [who, at] of [['maul', 150], ['grievous', 150]]) {
+  await page.evaluate(
+    (id) => window.game.scene.keys.Battle.scene.restart({ p1: id, p2: 'padme', difficulty: 'initiate' }),
+    who,
+  )
+  await page.waitForTimeout(800)
+  await page.evaluate(() => {
+    const s = window.game.scene.keys.Battle
+    s.player.body.reset(400, 430)
+    s.enemy.body.reset(760, 430)
+    s.enemy.hitstun = 60000
+  })
+  await page.waitForTimeout(300)
+  await page.keyboard.down('a')
+  await page.waitForTimeout(at)
+  await shot(`14-${who}-swing`)
+  await page.keyboard.up('a')
+  await page.waitForTimeout(400)
+}
+
 // --- Third scenario: capture each arena backdrop (restart until both seen) ---
 const seen = new Set()
-for (let i = 0; i < 12 && seen.size < 2; i++) {
+for (let i = 0; i < 40 && seen.size < 5; i++) {
   const id = await page.evaluate(() => window.game.scene.keys.Battle.arena.def.id)
   if (!seen.has(id)) {
     seen.add(id)

@@ -28,6 +28,7 @@ export function computePose(f, now) {
     armB: fists ? -8 : 12,
     legF: 0, legB: 0,
     head: 0, wpn: ranged ? 174 : 168,
+    wpnB: 168, // off-hand saber, when the character has one
     rigY: Math.sin(now / 420) * 1.6, rigAng: 0,
     cape: Math.sin(now / 500) * 2,
     snap: false,
@@ -117,19 +118,44 @@ export function computePose(f, now) {
       }
       return pose
     }
+    if (f.character.saber?.style === 'double') {
+      // Double-bladed staff (Maul, Inquisitor): the arm holds mostly
+      // forward while the staff itself twirls a full revolution through
+      // the strike — both blades sweep the arc.
+      if (f.swingT < T.attack.windupMs) {
+        const p = f.swingT / T.attack.windupMs
+        pose.armF = -22 + (30 - -22) * p
+        pose.wpn = 168 - 40 * p
+        pose.head = -5
+        pose.rigAng = -4
+      } else {
+        const p = Math.min(1, (f.swingT - T.attack.windupMs) / T.attack.activeMs)
+        pose.armF = 30 + (-80 - 30) * easeOut(p)
+        pose.wpn = 128 - 380 * easeOut(p) // the spin
+        pose.head = 2
+        pose.rigAng = 8
+      }
+      return pose
+    }
     if (f.swingT < T.attack.windupMs) {
       // Saber windup: arm cocked up and back, blade raised — the telegraph.
+      // The off hand pulls across the body (its saber cocks too, if any).
       const p = f.swingT / T.attack.windupMs
       pose.armF = -22 + (145 - -22) * p
       pose.wpn = 150
+      pose.armB = 30
+      pose.wpnB = 150
       pose.head = -6
       pose.rigAng = -5
     } else {
       // Active window: sweep from up-back to low-front while the real
-      // hitbox can connect.
+      // hitbox can connect; the off hand follows through underneath, so
+      // twin wielders (Ahsoka, Ventress, Grievous) slash with both.
       const p = Math.min(1, (f.swingT - T.attack.windupMs) / T.attack.activeMs)
       pose.armF = 145 + (-110 - 145) * easeOut(p)
       pose.wpn = 178
+      pose.armB = 30 + (-75 - 30) * easeOut(p)
+      pose.wpnB = 186
       pose.head = 2
       pose.rigAng = 7
     }

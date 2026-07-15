@@ -206,13 +206,14 @@ export const PUPPETS = {
     weapon: { type: 'pistol', body: 0x2a2d33, grip: 0x4a3520, trim: 0xb9c0cc },
   },
 
-  // Padmé Amidala — white action outfit.
+  // Padmé Amidala — queen of Naboo: long hair under a gold tiara,
+  // deep-red royal gown flowing to the floor.
   padme: {
-    head: { type: 'human', skin: 0xe4bd98, hair: 0x4a3220 },
-    torso: { type: 'tunic', cloth: 0xe8e4dc, flap: 0xd8d4cc, belt: 0xb0a898, buckle: 0x9aa0ad },
-    arm: { cloth: 0xe8e4dc, hand: 0xe4bd98 },
-    leg: { cloth: 0xd0ccc4, boot: 0x8a7a6c },
-    weapon: { type: 'pistol', body: 0x565c68, grip: 0x3a3428, trim: 0x9aa0ad },
+    head: { type: 'human', skin: 0xe4bd98, hair: 0x3e2a1c, long: true, tiara: 0xc8a03c },
+    torso: { type: 'gown', cloth: 0x7a2438, trim: 0xc8a03c },
+    arm: { cloth: 0x7a2438, hand: 0xe4bd98 },
+    leg: { type: 'gown', cloth: 0x6a1e30, trim: 0xc8a03c, sheen: 0xe8b8c8 },
+    weapon: { type: 'pistol', body: 0x565c68, grip: 0x6a1e30, trim: 0xc8a03c },
   },
 
   // General Grievous — bone-white mask and plating, two of his stolen
