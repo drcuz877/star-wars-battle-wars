@@ -2,6 +2,9 @@ import Phaser from 'phaser'
 import { TUNING as T } from '../../combat/tuning.js'
 import { tatooine } from './tatooine.js'
 import { mustafar } from './mustafar.js'
+import { throne } from './throne.js'
+import { hoth } from './hoth.js'
+import { cloudcity } from './cloudcity.js'
 
 // Arena registry (Phase 4). An arena is cosmetic only — layered backdrop
 // plus a light ambient update (embers, dust); the fight always happens on
@@ -11,7 +14,7 @@ import { mustafar } from './mustafar.js'
 // Each module exports { id, name, create(scene) }; create() draws the
 // backdrop and returns a handle: { def, update(dtMs)? }.
 
-export const ARENAS = [tatooine, mustafar]
+export const ARENAS = [tatooine, mustafar, throne, hoth, cloudcity]
 
 export function createArena(scene, id) {
   const def = ARENAS.find((a) => a.id === id) ?? Phaser.Utils.Array.GetRandom(ARENAS)
