@@ -2,6 +2,7 @@ import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
 import { AI_TIERS } from '../data/ai-tiers.js'
 import { CHARACTERS } from '../data/characters.js'
+import { ARENAS } from './arenas/index.js'
 import { loadJSON, saveJSON } from '../util/storage.js'
 import { portraitKey } from '../art/puppet.js'
 import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
@@ -99,11 +100,83 @@ export class DifficultyScene extends Phaser.Scene {
       this.cards.push({ id: tier.id, x, y })
     })
 
+    this.makeArenaRow()
+
     this.add.text(16, H - 20, `build ${__BUILD_TIME__}`, {
       fontFamily: 'Arial, sans-serif',
       fontSize: '10px',
       color: '#555577',
     })
+  }
+
+  // Battleground picker for single battles: any arena, or the dice.
+  // (Tournament mode will keep assigning arenas at random.)
+  makeArenaRow() {
+    const W = T.arena.width
+    const y = 476
+    this.arenaId = loadJSON('lastArena', 'random')
+    if (this.arenaId !== 'random' && !ARENAS.some((a) => a.id === this.arenaId)) this.arenaId = 'random'
+
+    this.add
+      .text(W / 2, y - 26, 'BATTLEGROUND', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#8a8ab0',
+      })
+      .setOrigin(0.5)
+
+    const options = [
+      { id: 'random', label: '🎲 Random' },
+      ...ARENAS.map((a) => ({ id: a.id, label: a.name.split(' — ')[0] })),
+    ]
+
+    // Build chips, then center the whole row.
+    const pad = 10
+    this.arenaChips = [] // {id, x, y} — also used by the automated verify script
+    const pieces = options.map((o) => {
+      const label = this.add
+        .text(0, y, o.label, {
+          fontFamily: 'Arial, sans-serif',
+          fontSize: '13px',
+          fontStyle: 'bold',
+          color: '#ffffff',
+        })
+        .setOrigin(0, 0.5)
+      const box = this.add
+        .rectangle(0, y, label.width + pad * 2, 26, 0xffffff, 0.05)
+        .setOrigin(0, 0.5)
+        .setInteractive({ useHandCursor: true })
+      box.setDepth(1)
+      label.setDepth(2)
+      return { o, box, label }
+    })
+    const total = pieces.reduce((sum, p) => sum + p.box.width, 0) + (pieces.length - 1) * 8
+    let x = W / 2 - total / 2
+    for (const p of pieces) {
+      p.box.setPosition(x, y)
+      p.label.setPosition(x + pad, y)
+      this.arenaChips.push({ id: p.o.id, x: x + p.box.width / 2, y })
+      p.box.on('pointerdown', () => this.pickArena(p.o.id))
+      x += p.box.width + 8
+    }
+    this.chipPieces = pieces
+    this.refreshArenaRow()
+  }
+
+  refreshArenaRow() {
+    for (const p of this.chipPieces) {
+      const on = p.o.id === this.arenaId
+      p.box.setStrokeStyle(on ? 2 : 1, on ? 0xffe81f : 0xffffff, on ? 1 : 0.25)
+      p.box.setFillStyle(0xffffff, on ? 0.12 : 0.05)
+      p.label.setColor(on ? '#ffe81f' : '#ffffff')
+    }
+  }
+
+  pickArena(id) {
+    this.arenaId = id
+    saveJSON('lastArena', id)
+    this.refreshArenaRow()
   }
 
   makeCard(tier, x, y, isLast) {
@@ -174,6 +247,11 @@ export class DifficultyScene extends Phaser.Scene {
 
   pick(tier) {
     saveJSON('lastDifficulty', tier.id)
-    this.scene.start('Battle', { p1: this.p1Id, p2: this.p2Id, difficulty: tier.id })
+    this.scene.start('Battle', {
+      p1: this.p1Id,
+      p2: this.p2Id,
+      difficulty: tier.id,
+      arena: this.arenaId,
+    })
   }
 }

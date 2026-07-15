@@ -28,6 +28,10 @@ export class BattleScene extends Phaser.Scene {
     this.p2Char = this.p2Char ?? byId('vader')
     if (data?.difficulty) this.difficultyId = data.difficulty
     this.difficultyId = this.difficultyId ?? DEFAULT_TIER_ID
+    // 'random' re-rolls every match, including rematches; a picked arena
+    // sticks for rematches until a new one is chosen.
+    if (data?.arena) this.arenaId = data.arena
+    this.arenaId = this.arenaId ?? 'random'
   }
 
   create() {
@@ -35,9 +39,9 @@ export class BattleScene extends Phaser.Scene {
     // Floor of the physics world = the arena ground line.
     this.physics.world.setBounds(0, -160, T.arena.width, T.arena.groundY + 160)
 
-    // Backdrop: one of the arenas, picked at random each match (Phase 4).
-    // Purely cosmetic — the ground line and bounds are identical for all.
-    this.arena = createArena(this)
+    // Backdrop: the chosen arena, or a random one (Phase 4). Purely
+    // cosmetic — the ground line and bounds are identical for all.
+    this.arena = createArena(this, this.arenaId === 'random' ? undefined : this.arenaId)
 
     this.projectiles = new Projectiles(this)
 

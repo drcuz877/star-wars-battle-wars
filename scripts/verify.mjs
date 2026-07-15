@@ -72,6 +72,15 @@ try {
     await page.mouse.click(pos.x, pos.y)
     await page.waitForTimeout(200)
   }
+
+  // Pick a specific battleground before the rank, so the arena-select
+  // path is exercised (the touch flow below keeps the Random default).
+  const chip = await page.evaluate(() =>
+    window.game.scene.keys.Difficulty.arenaChips.find((c) => c.id === 'tatooine'),
+  )
+  await page.mouse.click(chip.x, chip.y)
+  await page.waitForTimeout(200)
+
   await clickDifficulty('initiate')
 
   await page.waitForTimeout(700)
@@ -85,6 +94,10 @@ try {
     `${names.p} vs ${names.e}`,
   )
   check('battle starts on the selected AI difficulty', names.tier === 'initiate', names.tier)
+  check(
+    'battle starts in the selected arena',
+    await page.evaluate(() => window.game.scene.keys.Battle.arena.def.id === 'tatooine'),
+  )
   await page.screenshot({ path: `${SHOTS}/02-battle-start.png` })
 
   const state = () =>

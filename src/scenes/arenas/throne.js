@@ -6,7 +6,7 @@ import { skyBands } from './draw.js'
 // black floor catching the starlight. Ambient: a few stars twinkle.
 export const throne = {
   id: 'throne',
-  name: "Emperor's Throne Room",
+  name: 'Throne Room — Death Star II',
 
   create(scene) {
     const W = T.arena.width
