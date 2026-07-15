@@ -68,6 +68,10 @@ const HEADS = {
       p.rect(5.5, 6, 3.5, o.long ? 16 : 10, o.hair) // side hair, far
       p.rect(17, 6, 3.5, o.long ? 15 : 8, o.hair) // side hair, near
     }
+    if (o.buns) {
+      p.ellipse(4.5, 11, 6.5, 7, o.hair) // Leia's side buns
+      p.ellipse(21.5, 11, 6.5, 7, o.hair)
+    }
     if (o.beard) {
       p.round(7.5, 16, 11, 6, 2.5, o.beard)
       p.rect(9, 14.5, 1.6, 3, o.beard) // jawline up the cheeks
@@ -76,6 +80,30 @@ const HEADS = {
     p.rect(10.2, 13, 2, 2.4, 0x232730) // eyes (toward the facing side)
     p.rect(15, 13, 2, 2.4, 0x232730)
     if (!o.beard) p.rect(10.8, 18.2, 4.4, 1.1, 0xc09070) // mouth line
+    if (o.mustache) p.rect(9.8, 16.9, 6.4, 1.5, o.mustache) // (Lando)
+  },
+
+  // Duros under a wide-brim hat (Cad Bane): blue skin, red eyes.
+  duros(p, o) {
+    p.rect(10.5, 19, 5, 5, o.skin)
+    p.ellipse(13, 13.5, 18, 15, o.skin)
+    p.rect(9.2, 12.4, 2.8, 2.6, 0xc03028) // red eyes
+    p.rect(14, 12.4, 2.8, 2.6, 0xc03028)
+    p.rect(10.9, 17.8, 4.2, 1, 0x203038)
+    p.round(8, 2, 10, 7, 2, o.hat) // hat crown
+    p.ellipse(13, 8.2, 24, 5, o.hat) // wide brim
+  },
+
+  // Grievous: bone-white duranium mask, black eye band, yellow eyes.
+  grievous(p, o) {
+    p.rect(10, 19, 6, 5, o.shell) // armored neck
+    p.poly([[6, 3.5], [20, 3.5], [21.5, 13.5], [16, 23], [10, 23], [4.5, 13.5]], o.shell)
+    p.rect(6.5, 9.8, 13, 3.6, 0x0e0e12) // eye band
+    p.rect(8.4, 10.7, 2.6, 1.8, o.eyes ?? 0xd8b020)
+    p.rect(15, 10.7, 2.6, 1.8, o.eyes ?? 0xd8b020)
+    p.rect(12.4, 13.6, 1.2, 8.6, 0x3a3a40) // mask seams
+    p.rect(9.2, 15, 1.2, 5.6, 0x3a3a40)
+    p.rect(15.6, 15, 1.2, 5.6, 0x3a3a40)
   },
 
   // Yoda: green skin, winged ears, white wisps. Pair with def.scale.
@@ -370,11 +398,19 @@ export class Puppet {
 
     this.weaponType = def.weapon?.type ?? 'saber'
     this.saberStyle = fighter.character.saber?.style ?? 'single'
+    this.altSuffix = ''
     if (this.weaponType === 'saber') {
-      const bladeColor = fighter.character.saber?.colors?.[0] ?? 0xffffff
+      const c0 = fighter.character.saber?.colors?.[0] ?? 0xffffff
+      const c1 = fighter.character.saber?.colors?.[1] ?? c0
       bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon, this.saberStyle))
-      bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor, this.saberStyle))
-      bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, bladeColor))
+      bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, c0, this.saberStyle))
+      bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, c0))
+      if (c1 !== c0) {
+        // Off-hand saber in its own color (Grievous: blue + green).
+        this.altSuffix = '2'
+        bake(scene, k('blade2'), BLADE_W, BLADE_H, (p) => drawBlade(p, c1, this.saberStyle))
+        bake(scene, k('glow2'), GLOW_W, GLOW_H, (p) => drawGlow(p, c1))
+      }
       this.bladeKey = k('blade')
     } else if (this.weaponType === 'pistol') {
       bake(scene, k('pistol'), PISTOL_W, PISTOL_H, (p) => drawPistol(p, def.weapon))
@@ -425,7 +461,10 @@ export class Puppet {
     this.torso.setPosition(0, -6)
     this.rig.add(this.torso)
 
-    this.head = scene.add.container(0, -20)
+    // headScale > 1 gives the chibi look for small-stature characters
+    // (pair with def.scale): Yoda's body shrinks but his head stays near
+    // full size. Scales around the neck pivot, so it grows upward.
+    this.head = scene.add.container(0, -20).setScale(def.headScale ?? 1)
     this.head.add(img('head', 0.5, 1))
     this.rig.add(this.head)
 
@@ -438,10 +477,12 @@ export class Puppet {
     this.blades = [] // every live blade+glow, for KO switch-off / shimmer
     this.glows = []
     // Adds one blade+glow pair to a hand container; flip=true points it
-    // DOWN from the grip (the second end of a double-bladed staff).
-    const saberInto = (cont, flip = false) => {
-      const glow = img('glow', 0.5, 1).setBlendMode(Phaser.BlendModes.ADD)
-      const blade = img('blade', 0.5, 1)
+    // DOWN from the grip (the second end of a double-bladed staff);
+    // alt=true uses the second color's textures if the saber has one.
+    const saberInto = (cont, flip = false, alt = false) => {
+      const sfx = alt ? this.altSuffix : ''
+      const glow = img('glow' + sfx, 0.5, 1).setBlendMode(Phaser.BlendModes.ADD)
+      const blade = img('blade' + sfx, 0.5, 1)
       if (flip) {
         glow.setPosition(0, 3).setAngle(180)
         blade.setPosition(0, 4).setAngle(180)
@@ -457,11 +498,12 @@ export class Puppet {
       saberInto(this.wpn)
       if (this.saberStyle === 'double') saberInto(this.wpn, true) // Maul/Inquisitor staff
       this.wpn.add(img('hilt', 0.5, 0.5))
-      if (this.saberStyle === 'twin') {
-        // Second saber in the off hand (Ahsoka, Ventress), held at a
-        // fixed angle — the back arm's own motion animates it.
+      if (this.saberStyle === 'twin' || this.saberStyle === 'quad') {
+        // Second saber in the off hand (Ahsoka, Ventress; Grievous shows
+        // two of his four), held at a fixed angle — the back arm's own
+        // motion animates it.
         this.wpnB = scene.add.container(0, ARM_LEN).setAngle(168)
-        saberInto(this.wpnB)
+        saberInto(this.wpnB, false, true)
         this.wpnB.add(img('hilt', 0.5, 0.5))
         this.armB.add(this.wpnB)
       }

@@ -18,7 +18,9 @@ const easeOut = (p) => 1 - (1 - p) * (1 - p)
 
 export function computePose(f, now) {
   const ranged = f.d.ranged
-  const fists = f.d.archetype === 'brawler'
+  // Brawlers punch — unless they carry sabers (Grievous), in which case
+  // the saber swing/block poses fit their melee mechanics just as well.
+  const fists = f.d.archetype === 'brawler' && !f.character.saber
   const pose = {
     // Rest stance per archetype: saber angled low-forward, pistol at low
     // ready, brawler hands loose and a touch forward.

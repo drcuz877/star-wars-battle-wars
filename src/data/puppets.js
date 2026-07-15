@@ -18,9 +18,12 @@
 // ============================================================================
 
 export const PUPPETS = {
-  // Yoda — tiny (scale 0.8, feet-anchored), green skin, cream robe.
+  // Yoda — truly small body (scale 0.65, feet-anchored) with a near
+  // full-size head (headScale 1.5 of the scaled body ≈ 98% of a normal
+  // head) — the classic proportions. Grogu goes smaller still.
   yoda: {
-    scale: 0.8,
+    scale: 0.65,
+    headScale: 1.5,
     head: { type: 'yoda', skin: 0x9ab86a },
     torso: { type: 'tunic', cloth: 0xcabc9c, flap: 0xa89878, belt: 0x6a5a42, buckle: 0x8a7a5c },
     arm: { cloth: 0xcabc9c, hand: 0x9ab86a },
@@ -144,6 +147,102 @@ export const PUPPETS = {
     arm: { cloth: 0x2a2c34, hand: 0xb9b4ae },
     leg: { cloth: 0x24262e, boot: 0x16181e },
     weapon: { hilt: 0x565c68 },
+  },
+
+  // Din Djarin — unpainted beskar, clean helmet (no rangefinder).
+  din: {
+    head: { type: 'mandoHelmet', dome: 0x9aa2ac, trim: 0x6a7280 },
+    torso: { type: 'mandoArmor', suit: 0x5a4a3c, plate: 0x9aa2ac, belt: 0x3a3228, box: 0x6a7280 },
+    arm: { cloth: 0x5a4a3c, hand: 0x3a3228 },
+    leg: { cloth: 0x4a3e32, boot: 0x2a2218 },
+    weapon: { type: 'pistol', body: 0x2a2d33, grip: 0x3a2c20, trim: 0x9aa2ac },
+  },
+
+  // Bo-Katan Kryze — Nite Owl blue-gray armor.
+  bokatan: {
+    head: { type: 'mandoHelmet', dome: 0x5a7a9c, trim: 0xc8ccd4 },
+    torso: { type: 'mandoArmor', suit: 0x3a3e46, plate: 0x5a7a9c, belt: 0x282c34, box: 0x8a8e98 },
+    arm: { cloth: 0x3a3e46, hand: 0x282c34 },
+    leg: { cloth: 0x32363e, boot: 0x1e2228 },
+    weapon: { type: 'pistol', body: 0x2a2d33, grip: 0x282c34, trim: 0xc8ccd4 },
+  },
+
+  // Grogu — the smallest fighter in the game: baby body, oversized head,
+  // no weapon (his "bolts" are little Force pokes).
+  grogu: {
+    scale: 0.45,
+    headScale: 1.9,
+    head: { type: 'yoda', skin: 0x9ab86a },
+    torso: { type: 'tunic', cloth: 0xa89878, flap: 0x8a7a5c, belt: 0x6a5a42, buckle: 0x8a7a5c },
+    arm: { cloth: 0xa89878, hand: 0x9ab86a },
+    leg: { cloth: 0x8a7a5c, boot: 0x9ab86a },
+    weapon: { type: 'fists' },
+  },
+
+  // Finn — brown resistance jacket over a light shirt.
+  finn: {
+    head: { type: 'human', skin: 0x6a4632, hair: 0x1a1410 },
+    torso: { type: 'vest', shirt: 0xd8d2c2, vest: 0x5a3826, belt: 0x2a2018 },
+    arm: { cloth: 0x5a3826, hand: 0x6a4632 },
+    leg: { cloth: 0x3a3634, boot: 0x1e1a16 },
+    weapon: { type: 'pistol', body: 0x22252b, grip: 0x3a2c20, trim: 0x565c68 },
+  },
+
+  // Leia Organa — white senatorial dress, the side buns.
+  leia: {
+    head: { type: 'human', skin: 0xe8c8a8, hair: 0x4a3220, buns: true },
+    torso: { type: 'tunic', cloth: 0xe8e4dc, flap: 0xd8d4cc, belt: 0xb0aca4, buckle: 0x9aa0ad },
+    arm: { cloth: 0xe8e4dc, hand: 0xe8c8a8 },
+    leg: { cloth: 0xd0ccc4, boot: 0x8a8578 },
+    weapon: { type: 'pistol', body: 0x565c68, grip: 0x3a3428, trim: 0x9aa0ad },
+  },
+
+  // Lando Calrissian — blue shirt, navy half-cape look, the mustache.
+  lando: {
+    head: { type: 'human', skin: 0x8a5c40, hair: 0x2a1e16, mustache: 0x2a1e16 },
+    torso: { type: 'vest', shirt: 0x3a5a8a, vest: 0x222c44, belt: 0x1a2234, buckle: 0xb9c0cc },
+    arm: { cloth: 0x3a5a8a, hand: 0x8a5c40 },
+    leg: { cloth: 0x2a3350, boot: 0x1a2030 },
+    weapon: { type: 'pistol', body: 0x2a2d33, grip: 0x4a3520, trim: 0xb9c0cc },
+  },
+
+  // Padmé Amidala — white action outfit.
+  padme: {
+    head: { type: 'human', skin: 0xe4bd98, hair: 0x4a3220 },
+    torso: { type: 'tunic', cloth: 0xe8e4dc, flap: 0xd8d4cc, belt: 0xb0a898, buckle: 0x9aa0ad },
+    arm: { cloth: 0xe8e4dc, hand: 0xe4bd98 },
+    leg: { cloth: 0xd0ccc4, boot: 0x8a7a6c },
+    weapon: { type: 'pistol', body: 0x565c68, grip: 0x3a3428, trim: 0x9aa0ad },
+  },
+
+  // General Grievous — bone-white mask and plating, two of his stolen
+  // sabers drawn (blue front, green off-hand); Four-Arm Fury shows the
+  // full flurry.
+  grievous: {
+    head: { type: 'grievous', shell: 0xd8d4c8, eyes: 0xd8b020 },
+    torso: { type: 'mandoArmor', suit: 0x2a2c2e, plate: 0xd8d4c8, belt: 0x1a1c1e, box: 0x8a8578 },
+    arm: { cloth: 0xc8c4b8, hand: 0x8a8578 },
+    leg: { cloth: 0xc8c4b8, boot: 0x8a8578 },
+    cape: { color: 0x2e2a30 },
+    weapon: { hilt: 0x9aa0aa },
+  },
+
+  // Jango Fett — silver-blue armor, rangefinder up.
+  jango: {
+    head: { type: 'mandoHelmet', dome: 0x6a7a8c, trim: 0x3a5a7a, rangefinder: true },
+    torso: { type: 'mandoArmor', suit: 0x4a5058, plate: 0x3a5a7a, belt: 0x32363c, box: 0x8a8e98 },
+    arm: { cloth: 0x4a5058, hand: 0x32363c },
+    leg: { cloth: 0x3e444c, boot: 0x262a30 },
+    weapon: { type: 'pistol', body: 0x2a2d33, grip: 0x32363c, trim: 0x8a8e98 },
+  },
+
+  // Cad Bane — Duros bounty hunter: blue skin, red eyes, wide-brim hat.
+  cadbane: {
+    head: { type: 'duros', skin: 0x4a8a9a, hat: 0x4a3828 },
+    torso: { type: 'vest', shirt: 0x8a6a4a, vest: 0x5a3c28, belt: 0x3a281c },
+    arm: { cloth: 0x5a3c28, hand: 0x4a8a9a },
+    leg: { cloth: 0x4a3830, boot: 0x2a1c14 },
+    weapon: { type: 'pistol', body: 0x22252b, grip: 0x2a1c14, trim: 0x8a8578 },
   },
 
   // Han Solo — white shirt, black vest, DL-44 heavy blaster.

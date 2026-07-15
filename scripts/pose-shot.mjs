@@ -162,12 +162,11 @@ await page.waitForTimeout(900)
 await shot('12-boba')
 const matchups = [
   ['yoda', 'maul'],
-  ['ahsoka', 'kylo'],
-  ['obiwan', 'dooku'],
-  ['palpatine', 'quigon'],
-  ['rey', 'ventress'],
-  ['mace', 'inquisitor'],
-  ['anakin', 'vader'],
+  ['grogu', 'grievous'],
+  ['din', 'jango'],
+  ['bokatan', 'cadbane'],
+  ['leia', 'lando'],
+  ['padme', 'finn'],
 ]
 for (const [p1, p2] of matchups) {
   await page.evaluate(
