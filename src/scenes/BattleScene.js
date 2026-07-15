@@ -9,6 +9,7 @@ import { KeyboardControls } from '../input/controls.js'
 import { TouchControls } from '../input/touch.js'
 import { Hud } from '../ui/hud.js'
 import { createArena } from './arenas/index.js'
+import { applyCrispCamera, shakeCamera } from '../util/display.js'
 
 const byId = (id) => CHARACTERS.find((c) => c.id === id)
 
@@ -30,6 +31,7 @@ export class BattleScene extends Phaser.Scene {
   }
 
   create() {
+    applyCrispCamera(this)
     // Floor of the physics world = the arena ground line.
     this.physics.world.setBounds(0, -160, T.arena.width, T.arena.groundY + 160)
 
@@ -207,7 +209,7 @@ export class BattleScene extends Phaser.Scene {
   endRound(winner, headline) {
     if (this.roundOver) return
     this.roundOver = true
-    this.cameras.main.shake(200, 0.006)
+    shakeCamera(this, 200, 0.006)
 
     const cx = T.arena.width / 2
     const cy = T.arena.height / 2

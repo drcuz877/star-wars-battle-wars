@@ -2,7 +2,7 @@ import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
 import { CHARACTERS, overall } from '../data/characters.js'
 import { portraitKey } from '../art/puppet.js'
-import { RENDER_SCALE } from '../util/display.js'
+import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
 
 const ARCHETYPE_ICON = { saber: '🗡', blaster: '🔫', brawler: '🐻' }
 const GOLD = '#ffe81f'
@@ -16,6 +16,7 @@ export class SelectScene extends Phaser.Scene {
   }
 
   create() {
+    applyCrispCamera(this)
     const W = T.arena.width
     const H = T.arena.height
 

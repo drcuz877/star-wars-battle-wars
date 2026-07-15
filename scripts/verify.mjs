@@ -375,6 +375,48 @@ try {
     `enemy HP ${before.ehp} -> ${after.ehp}`,
   )
   check('no touch-context errors', terrors.length === 0, terrors.slice(0, 3).join(' | '))
+
+  // ---------- High-DPI display: crisp-camera input mapping ----------
+  // At DPR 3 the canvas backing store is RENDER_SCALE× the logical size
+  // and every camera is zoomed to match (Phase 4 crispness pass). The
+  // Phase 3 attempt at this broke click targeting on every card, so this
+  // section drives the real select flow at DPR 3 forever after.
+  const hctx = await browser.newContext({
+    viewport: { width: 960, height: 540 },
+    deviceScaleFactor: 3,
+  })
+  const hp = await hctx.newPage()
+  const herrors = []
+  hp.on('pageerror', (e) => herrors.push(String(e)))
+  await hp.goto(URL)
+  await hp.waitForSelector('canvas', { timeout: 10000 })
+  await hp.waitForTimeout(900)
+
+  const hscale = await hp.evaluate(() => window.game.scale.width / 960)
+  check('high-DPI: canvas backing store is upscaled', hscale > 1, `scale ${hscale}`)
+
+  const hclick = async (scene, id) => {
+    const pos = await hp.evaluate(
+      ([s, cid]) => window.game.scene.keys[s].cards.find((c) => c.id === cid),
+      [scene, id],
+    )
+    await hp.mouse.click(pos.x, pos.y)
+    await hp.waitForTimeout(250)
+  }
+  await hclick('Select', 'luke')
+  check(
+    'high-DPI: clicking a card still targets correctly',
+    await hp.evaluate(() => window.game.scene.keys.Select.picking === 'p2'),
+  )
+  await hclick('Select', 'vader')
+  await hclick('Difficulty', 'initiate')
+  await hp.waitForTimeout(700)
+  check(
+    'high-DPI: full select flow reaches the right battle',
+    await hp.evaluate(() => window.game.scene.keys.Battle?.player?.name === 'Luke Skywalker'),
+  )
+  await hp.screenshot({ path: `${SHOTS}/06-high-dpi.png` })
+  check('no high-DPI errors', herrors.length === 0, herrors.slice(0, 3).join(' | '))
 } finally {
   if (browser) await browser.close()
   spawnSync('taskkill', ['/pid', String(server.pid), '/T', '/F'], { stdio: 'ignore' })

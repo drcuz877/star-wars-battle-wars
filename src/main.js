@@ -29,8 +29,11 @@ const game = new Phaser.Game({
   scale: {
     mode: Phaser.Scale.FIT,
     autoCenter: Phaser.Scale.CENTER_BOTH,
-    width: T.arena.width,
-    height: T.arena.height,
+    // Backing store at RENDER_SCALE× logical size; each scene zooms its
+    // camera to match (util/display.js applyCrispCamera), so all code
+    // keeps thinking in 960×540 while shapes rasterize at device res.
+    width: T.arena.width * RENDER_SCALE,
+    height: T.arena.height * RENDER_SCALE,
   },
   scene: [SelectScene, DifficultyScene, BattleScene, PauseScene],
 })

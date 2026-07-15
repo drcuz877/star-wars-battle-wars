@@ -3,6 +3,7 @@ import { TUNING as T } from './tuning.js'
 import { deriveStats } from './derive.js'
 import { startSpecial, updateSpecial, cancelSpecial, specialLocks } from './specials.js'
 import { createPuppet } from '../art/puppet.js'
+import { shakeCamera } from '../util/display.js'
 
 // One fighter: a physics rectangle plus combat state (HP, stamina, special
 // meter, swing/hitstun timers). The player and the AI both drive a Fighter
@@ -387,7 +388,7 @@ export class Fighter {
       crit ? '#ffd700' : blocked ? '#8ab4ff' : '#ffffff',
       crit ? 26 : 20,
     )
-    this.scene.cameras.main.shake(crit ? 160 : 60, crit ? 0.009 : 0.004)
+    shakeCamera(this.scene, crit ? 160 : 60, crit ? 0.009 : 0.004)
 
     if (this.hp === 0) this.knockOut(dir)
     return { damage: dmg, blocked, missed: false }

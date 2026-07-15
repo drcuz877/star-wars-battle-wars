@@ -4,7 +4,7 @@ import { AI_TIERS } from '../data/ai-tiers.js'
 import { CHARACTERS } from '../data/characters.js'
 import { loadJSON, saveJSON } from '../util/storage.js'
 import { portraitKey } from '../art/puppet.js'
-import { RENDER_SCALE } from '../util/display.js'
+import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
 
 const GOLD = '#ffe81f'
 
@@ -22,6 +22,7 @@ export class DifficultyScene extends Phaser.Scene {
   }
 
   create() {
+    applyCrispCamera(this)
     const W = T.arena.width
     const H = T.arena.height
 

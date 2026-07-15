@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
+import { applyCrispCamera } from '../util/display.js'
 
 // Overlay launched on top of a paused BattleScene. Settings entries
 // (control remapping, sound) arrive with the Phase 6 settings work.
@@ -9,6 +10,7 @@ export class PauseScene extends Phaser.Scene {
   }
 
   create() {
+    applyCrispCamera(this)
     const cx = T.arena.width / 2
     const cy = T.arena.height / 2
     this.add.rectangle(cx, cy, T.arena.width, T.arena.height, 0x000000, 0.65)

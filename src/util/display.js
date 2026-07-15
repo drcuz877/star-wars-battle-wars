@@ -20,3 +20,24 @@ export const RENDER_SCALE = Math.min(
   Math.max(1, Math.ceil((window.innerWidth * (window.devicePixelRatio || 1)) / T.arena.width)),
   3,
 )
+
+// Phase 4 crispness pass: the canvas backing store is RENDER_SCALE× the
+// logical 960×540 (main.js), so vector Graphics, shapes, and gradients
+// rasterize at (roughly) real device resolution instead of being CSS-
+// stretched. Every scene keeps building its world in logical coordinates
+// and calls this once in create(): zoom the camera up to match, then
+// re-center it on the logical midpoint — the missing step that sank the
+// Phase 3 attempt (setZoom alone re-frames around the enlarged canvas
+// center, which broke click/tap targeting on every card and button).
+export function applyCrispCamera(scene) {
+  scene.cameras.main.setZoom(RENDER_SCALE)
+  scene.cameras.main.centerOn(T.arena.width / 2, T.arena.height / 2)
+}
+
+// Camera shake whose felt strength is the same at every RENDER_SCALE.
+// Phaser's shake offset is intensity × camera width, then rides through
+// the zoomed matrix — both of which we scaled up — so the raw call gets
+// ~RENDER_SCALE² stronger. All gameplay shakes go through here instead.
+export function shakeCamera(scene, durationMs, intensity) {
+  scene.cameras.main.shake(durationMs, intensity / (RENDER_SCALE * RENDER_SCALE))
+}
