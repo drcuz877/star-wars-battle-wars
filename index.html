@@ -3,11 +3,20 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>Star Wars Battle Wars</title>
     <style>
       html, body { margin: 0; padding: 0; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
-      #app { display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+      /* `min-height: 100vh` is unreliable on iOS Safari: vh is pinned to
+         the LARGEST possible viewport (address bar hidden), so in
+         landscape — where the address bar eats a much bigger share of a
+         short screen — #app was taller than what's actually visible, and
+         with overflow:hidden the excess (part of the game) was simply
+         unreachable rather than scrollable. `position: fixed; inset: 0`
+         anchors #app to the real visible viewport instead of a vh unit,
+         so Phaser's FIT scaling (which measures this element) always
+         sees the true available space, portrait or landscape. */
+      #app { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; }
       #app canvas { touch-action: none; }
     </style>
   </head>
