@@ -129,7 +129,7 @@ await page.goto(URL)
 await page.waitForSelector('canvas', { timeout: 10000 })
 await page.waitForTimeout(900)
 await click('Select', 'han')
-await click('Select', 'vader')
+await click('Select', 'chewbacca')
 await click('Difficulty', 'initiate')
 await page.waitForTimeout(700)
 await page.evaluate(() => {
@@ -140,10 +140,26 @@ await page.evaluate(() => {
 })
 await page.waitForTimeout(300)
 await page.keyboard.press('a', { delay: 60 })
-await page.waitForTimeout(240)
+await page.waitForTimeout(160)
 await shot('09-bolt-flight')
-await page.waitForTimeout(320)
+await page.waitForTimeout(400)
 await shot('10-bolt-impact')
+
+// Blaster dodge slide
+await page.waitForTimeout(600)
+await page.keyboard.press('d', { delay: 60 })
+await page.waitForTimeout(130)
+await shot('10b-dodge')
+
+// --- Boba Fett: exercises the mandoArmor/mandoHelmet painters in battle ---
+await page.goto(URL)
+await page.waitForSelector('canvas', { timeout: 10000 })
+await page.waitForTimeout(900)
+await click('Select', 'boba')
+await click('Select', 'luke')
+await click('Difficulty', 'initiate')
+await page.waitForTimeout(900)
+await shot('12-boba')
 
 // --- Third scenario: capture each arena backdrop (restart until both seen) ---
 const seen = new Set()

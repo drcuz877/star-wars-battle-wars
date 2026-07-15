@@ -70,6 +70,36 @@ const HEADS = {
     p.rect(10.8, 18.2, 4.4, 1.1, 0xc09070) // mouth line
   },
 
+  // Wookiee: all fur, lighter muzzle, dark nose (Chewbacca).
+  wookiee(p, o) {
+    p.rect(9, 19, 8, 5, o.fur) // neck fur
+    p.ellipse(13, 12, 21, 20, o.fur) // head mass
+    p.ellipse(13, 5.5, 13, 7, o.crown ?? o.fur) // crown tuft
+    p.rect(5, 8, 3, 9, o.shade, 0.55) // fur shading streaks
+    p.rect(18.5, 9, 3, 8, o.shade, 0.55)
+    p.ellipse(13, 15.5, 11, 9, o.muzzle) // lighter muzzle patch
+    p.ellipse(13, 13.5, 4.5, 3, 0x1c120c) // nose
+    p.rect(9.6, 9.5, 2.2, 2.6, 0x2a1c12) // eyes
+    p.rect(14.4, 9.5, 2.2, 2.6, 0x2a1c12)
+  },
+
+  // Mandalorian helmet: dome, ear caps, black T-visor, optional
+  // rangefinder stalk (Boba/Jango; Din's is clean).
+  mandoHelmet(p, o) {
+    p.rect(8, 19, 10, 5, o.dome) // neck seal
+    p.round(4.5, 4, 17, 18, 5, o.dome) // helmet shell
+    p.ellipse(13, 6.5, 17, 7, o.dome) // dome top
+    p.rect(3.5, 9, 3, 7, o.ear ?? o.trim) // ear caps
+    p.rect(19.5, 9, 3, 7, o.ear ?? o.trim)
+    p.rect(6.5, 8.5, 13, 3, 0x0c0e10) // visor: horizontal bar
+    p.rect(11.6, 8.5, 2.8, 9, 0x0c0e10) // visor: vertical drop
+    p.rect(6.5, 7.9, 13, 1, o.trim, 0.8) // brow trim
+    if (o.rangefinder) {
+      p.rect(20.5, 1.5, 1.8, 8, o.trim) // stalk
+      p.rect(19.4, 0.5, 4, 2.4, 0x22262c) // antenna head
+    }
+  },
+
   // Vader's helmet: dome, flared skirt, angular mask, silver grille.
   vaderHelmet(p, o) {
     p.rect(8, 19, 10, 5, o.mask) // neck seal
@@ -96,6 +126,44 @@ const TORSOS = {
     p.round(11, 18.7, 4, 3.6, 1, o.buckle)
   },
 
+  // Open vest over a shirt, gun belt (Han, Lando).
+  vest(p, o) {
+    p.round(1.5, 0.5, 23, 6, 2.5, o.shirt) // shoulder line
+    p.round(3, 1, 20, 25, 3, o.shirt)
+    p.round(3, 1, 6.5, 20, 2, o.vest) // vest panels
+    p.round(16.5, 1, 6.5, 20, 2, o.vest)
+    p.rect(3, 18, 20, 4.5, o.belt)
+    p.round(10.5, 18.6, 4.5, 3.4, 1, o.buckle ?? 0xb9c0cc)
+    p.rect(17, 21, 4.5, 4, o.belt, 0.9) // holster drop
+  },
+
+  // Mandalorian plate armor over a flight suit (Boba, Jango, Din).
+  mandoArmor(p, o) {
+    p.round(2.5, 0.5, 21, 25.5, 3, o.suit)
+    p.round(0.5, 0, 9.5, 6, 2, o.plate) // shoulder plates
+    p.round(16, 0, 9.5, 6, 2, o.plate)
+    p.round(5, 6.5, 7, 6, 1.5, o.plate) // chest plates
+    p.round(14, 6.5, 7, 6, 1.5, o.plate)
+    p.round(9.5, 13, 7, 4, 1, o.plate) // abdomen plate
+    p.rect(2.5, 19, 21, 4.5, o.belt)
+    p.rect(5, 20, 3.5, 2.6, o.box ?? 0x8a8578) // belt pouches
+    p.rect(11.2, 20, 3.5, 2.6, o.box ?? 0x8a8578)
+    p.rect(17.4, 20, 3.5, 2.6, o.box ?? 0x8a8578)
+  },
+
+  // Full-body fur with a bandolier (Chewbacca).
+  furry(p, o) {
+    p.round(2.5, 0.5, 21, 26, 4, o.fur)
+    p.rect(4, 3, 3, 16, o.shade, 0.5) // fur streaks
+    p.rect(11.5, 5, 3, 18, o.shade, 0.45)
+    p.rect(19, 3, 3, 14, o.shade, 0.5)
+    // Bandolier: right shoulder to left hip, with ammo cells.
+    p.poly([[20, 0.5], [24, 3], [6, 26], [2.5, 23]], o.strap)
+    p.rect(16.5, 4.5, 3.4, 4, o.cell)
+    p.rect(12.5, 9.5, 3.4, 4, o.cell)
+    p.rect(8.5, 14.5, 3.4, 4, o.cell)
+  },
+
   // Vader's chest armor: shoulder pads, control panel, belt boxes.
   vaderArmor(p, o) {
     p.round(2.5, 1, 21, 25, 3, o.armor)
@@ -115,15 +183,29 @@ const TORSOS = {
   },
 }
 
-function drawArm(p, o) {
-  p.round(2, 1, 6, 22, 2.5, o.cloth)
-  p.ellipse(5, 25.5, 6.5, 6.5, o.hand)
+const ARMS = {
+  sleeve(p, o) {
+    p.round(2, 1, 6, 22, 2.5, o.cloth)
+    p.ellipse(5, 25.5, 6.5, 6.5, o.hand)
+  },
+  fur(p, o) {
+    p.round(1.5, 1, 7, 23, 3, o.fur)
+    p.rect(3, 4, 2, 14, o.shade, 0.45)
+    p.ellipse(5, 25.5, 7, 7, o.fur) // paw
+  },
 }
 
-function drawLeg(p, o) {
-  p.round(2, 1, 6, 23, 2.5, o.cloth)
-  p.round(1.5, 22, 7, 12.5, 2, o.boot)
-  p.round(1.5, 31, 9.5, 3.8, 1.5, o.boot) // toe points forward (+x)
+const LEGS = {
+  pants(p, o) {
+    p.round(2, 1, 6, 23, 2.5, o.cloth)
+    p.round(1.5, 22, 7, 12.5, 2, o.boot)
+    p.round(1.5, 31, 9.5, 3.8, 1.5, o.boot) // toe points forward (+x)
+  },
+  fur(p, o) {
+    p.round(1.5, 1, 7, 31, 3, o.fur)
+    p.rect(3, 5, 2, 18, o.shade, 0.45)
+    p.ellipse(5.5, 33, 8, 5, o.fur) // furry foot
+  },
 }
 
 function drawCape(p, o) {
@@ -150,6 +232,18 @@ function drawGlow(p, color) {
   p.round(3, 4, 16, 42, 8, color, 0.1)
   p.round(6, 3, 10, 43, 5, color, 0.2)
   p.round(8, 2, 6, 44, 3, color, 0.32)
+}
+
+// Blaster pistol, barrel pointing up (same convention as the blade, so
+// the animator's wpn angles mean the same thing for every archetype).
+// Texture 10×20, grip point at (5, 15).
+const PISTOL_W = 10, PISTOL_H = 20
+function drawPistol(p, o) {
+  p.rect(3.5, 1, 3, 10, o.body ?? 0x2a2d33) // barrel
+  p.rect(3, 0.5, 4, 2, o.trim ?? 0x40454e) // muzzle
+  p.round(2.5, 9.5, 5, 4.5, 1, o.body ?? 0x2a2d33) // receiver
+  p.rect(2.8, 13.5, 4, 6, o.grip ?? 0x4a3520) // grip
+  p.rect(1.8, 10.5, 1.6, 2.4, o.trim ?? 0x40454e) // scope nub / sight
 }
 
 function bake(scene, key, w, h, painter) {
@@ -191,14 +285,20 @@ export class Puppet {
 
     bake(scene, k('head'), HEAD_W, HEAD_H, (p) => HEADS[def.head.type](p, def.head))
     bake(scene, k('torso'), TORSO_W, TORSO_H, (p) => TORSOS[def.torso.type](p, def.torso))
-    bake(scene, k('arm'), ARM_W, ARM_H, (p) => drawArm(p, def.arm))
-    bake(scene, k('leg'), LEG_W, LEG_H, (p) => drawLeg(p, def.leg))
+    bake(scene, k('arm'), ARM_W, ARM_H, (p) => ARMS[def.arm.type ?? 'sleeve'](p, def.arm))
+    bake(scene, k('leg'), LEG_W, LEG_H, (p) => LEGS[def.leg.type ?? 'pants'](p, def.leg))
     if (def.cape) bake(scene, k('cape'), CAPE_W, CAPE_H, (p) => drawCape(p, def.cape))
-    const bladeColor = fighter.character.saber?.colors?.[0] ?? 0xffffff
-    bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon))
-    bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor))
-    bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, bladeColor))
-    this.bladeKey = k('blade')
+
+    this.weaponType = def.weapon?.type ?? 'saber'
+    if (this.weaponType === 'saber') {
+      const bladeColor = fighter.character.saber?.colors?.[0] ?? 0xffffff
+      bake(scene, k('hilt'), HILT_W, HILT_H, (p) => drawHilt(p, def.weapon))
+      bake(scene, k('blade'), BLADE_W, BLADE_H, (p) => drawBlade(p, bladeColor))
+      bake(scene, k('glow'), GLOW_W, GLOW_H, (p) => drawGlow(p, bladeColor))
+      this.bladeKey = k('blade')
+    } else if (this.weaponType === 'pistol') {
+      bake(scene, k('pistol'), PISTOL_W, PISTOL_H, (p) => drawPistol(p, def.weapon))
+    }
 
     const img = (part, ox, oy) =>
       scene.add.image(0, 0, k(part)).setScale(1 / S).setOrigin(ox, oy)
@@ -245,13 +345,20 @@ export class Puppet {
     this.rig.add(this.head)
 
     this.armF = limb('arm', SHOULDER.x, SHOULDER.y, 2 / ARM_H)
-    // Weapon container pivots at the hand: glow behind, then blade, then
-    // hilt. Grip point is the container origin.
+    // Weapon container pivots at the hand; grip point is the container
+    // origin. Sabers: glow behind, then blade, then hilt. Pistols: just
+    // the gun. Brawlers: an empty container (fists), so animator wpn
+    // angles are harmless no-ops.
     this.wpn = scene.add.container(0, ARM_LEN)
-    this.glow = img('glow', 0.5, 1).setPosition(0, -3).setBlendMode(Phaser.BlendModes.ADD)
-    this.blade = img('blade', 0.5, 1).setPosition(0, -4)
-    this.hilt = img('hilt', 0.5, 0.5).setPosition(0, 0)
-    this.wpn.add([this.glow, this.blade, this.hilt])
+    this.glow = null
+    this.blade = null
+    if (this.weaponType === 'saber') {
+      this.glow = img('glow', 0.5, 1).setPosition(0, -3).setBlendMode(Phaser.BlendModes.ADD)
+      this.blade = img('blade', 0.5, 1).setPosition(0, -4)
+      this.wpn.add([this.glow, this.blade, img('hilt', 0.5, 0.5)])
+    } else if (this.weaponType === 'pistol') {
+      this.wpn.add(img('pistol', 0.5, 15 / PISTOL_H))
+    }
     this.armF.add(this.wpn)
     this.trailAccum = 0
 
@@ -290,13 +397,13 @@ export class Puppet {
       c[key] += ((target[key] ?? 0) - c[key]) * k
     }
 
-    // Blade hum: a slow shimmer on the additive glow.
-    this.glow.setAlpha(0.75 + Math.sin(this.scene.time.now / 140) * 0.15)
+    // Blade hum: a slow shimmer on the additive glow (sabers only).
+    if (this.glow) this.glow.setAlpha(0.75 + Math.sin(this.scene.time.now / 140) * 0.15)
 
     // Swing trail: while the swing can connect, drop fading additive
     // ghosts of the blade along its arc (in rig space, so they mirror and
     // travel with the fighter like classic fighting-game trails).
-    if (f.swinging && f.swingT >= T.attack.windupMs && !f.ko) {
+    if (this.blade && f.swinging && f.swingT >= T.attack.windupMs && !f.ko) {
       this.trailAccum += dtMs || 16.7
       if (this.trailAccum >= 15) {
         this.trailAccum = 0
@@ -356,7 +463,7 @@ export class Puppet {
   setKo() {
     for (const i of this.images) i.setTint(0x8890a8)
     // The saber switches off when its owner goes down.
-    this.blade.setVisible(false)
-    this.glow.setVisible(false)
+    this.blade?.setVisible(false)
+    this.glow?.setVisible(false)
   }
 }

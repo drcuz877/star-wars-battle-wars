@@ -17,9 +17,16 @@ import { TUNING as T } from './tuning.js'
 const easeOut = (p) => 1 - (1 - p) * (1 - p)
 
 export function computePose(f, now) {
+  const ranged = f.d.ranged
+  const fists = f.d.archetype === 'brawler'
   const pose = {
-    armF: -22, armB: 12, legF: 0, legB: 0,
-    head: 0, wpn: 168, rigY: Math.sin(now / 420) * 1.6, rigAng: 0,
+    // Rest stance per archetype: saber angled low-forward, pistol at low
+    // ready, brawler hands loose and a touch forward.
+    armF: ranged ? -32 : fists ? -14 : -22,
+    armB: fists ? -8 : 12,
+    legF: 0, legB: 0,
+    head: 0, wpn: ranged ? 174 : 168,
+    rigY: Math.sin(now / 420) * 1.6, rigAng: 0,
     cape: Math.sin(now / 500) * 2,
     snap: false,
   }
@@ -48,6 +55,17 @@ export function computePose(f, now) {
     }
   }
 
+  // Blaster dodge slide: lean hard into the direction of travel while the
+  // i-frames (and the vulnerable recovery tail) play out.
+  if (f.dodgeT >= 0) {
+    const lean = Math.sign(f.body.velocity.x || -f.facing) * f.facing * 16
+    Object.assign(pose, {
+      rigAng: lean, rigY: 5, head: -lean * 0.4,
+      legF: -34, legB: 38, armF: -20, armB: 30, wpn: 170,
+    })
+    return pose
+  }
+
   if (f.hitstun > 0) {
     Object.assign(pose, { armF: -40, armB: 45, head: -14, wpn: 150, rigAng: -9 })
     return pose
@@ -67,10 +85,38 @@ export function computePose(f, now) {
     return pose
   }
 
+  // Blaster fire: planted, arm locked out, barrel extending the arm. The
+  // fireRoot timer (anti-kite plant after each shot) doubles as the pose
+  // window — the same beat the combat rules already impose.
+  if (ranged && f.fireRoot > 0) {
+    Object.assign(pose, {
+      snap: true, armF: -88, wpn: 180, armB: -26,
+      head: -3, rigAng: 4, legF: -10, legB: 12,
+    })
+    return pose
+  }
+
   if (f.swinging) {
     pose.snap = true
+    if (fists) {
+      // Brawler punch: short pull-back, then a straight jab with the
+      // off-hand up as a guard.
+      if (f.swingT < T.attack.windupMs) {
+        const p = f.swingT / T.attack.windupMs
+        pose.armF = -14 + (42 - -14) * p
+        pose.armB = -30
+        pose.rigAng = -4
+      } else {
+        const p = Math.min(1, (f.swingT - T.attack.windupMs) / T.attack.activeMs)
+        pose.armF = 42 + (-92 - 42) * easeOut(p)
+        pose.armB = -38
+        pose.rigAng = 9
+        pose.head = 2
+      }
+      return pose
+    }
     if (f.swingT < T.attack.windupMs) {
-      // Windup: arm cocked up and back, blade raised — the telegraph.
+      // Saber windup: arm cocked up and back, blade raised — the telegraph.
       const p = f.swingT / T.attack.windupMs
       pose.armF = -22 + (145 - -22) * p
       pose.wpn = 150
@@ -89,6 +135,14 @@ export function computePose(f, now) {
   }
 
   if (f.blocking) {
+    if (fists) {
+      // Brace: both arms crossed in front, hunkered down.
+      Object.assign(pose, {
+        armF: -52, armB: -44, head: 6, rigY: pose.rigY + 3,
+        legF: -10, legB: 12,
+      })
+      return pose
+    }
     Object.assign(pose, {
       armF: -70, armB: 25, wpn: 62, head: -4,
       legF: -8, legB: 10, rigY: pose.rigY + 2,
