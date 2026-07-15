@@ -41,3 +41,22 @@ const game = new Phaser.Game({
 
 // Handle for debugging and automated verification scripts.
 window.game = game
+
+// Mobile browser toolbars (Safari AND Chrome) lie to CSS about the usable
+// height — vh units and even fixed-position sizing track the layout
+// viewport, which can be taller than what's actually on screen while a
+// toolbar is showing, so the canvas got cut off top/bottom. visualViewport
+// is the browser's honest report of the visible area: size #app from it
+// directly and re-run Phaser's FIT scaling whenever it changes (toolbar
+// show/hide, rotation).
+const fitToVisibleViewport = () => {
+  const app = document.getElementById('app')
+  const vv = window.visualViewport
+  app.style.width = `${vv ? vv.width : window.innerWidth}px`
+  app.style.height = `${vv ? vv.height : window.innerHeight}px`
+  game.scale.refresh()
+}
+window.visualViewport?.addEventListener('resize', fitToVisibleViewport)
+window.addEventListener('resize', fitToVisibleViewport)
+window.addEventListener('orientationchange', () => setTimeout(fitToVisibleViewport, 250))
+fitToVisibleViewport()

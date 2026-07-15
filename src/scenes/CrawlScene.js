@@ -9,8 +9,8 @@ import { applyCrispCamera } from '../util/display.js'
 // The recede is faked flat: the crawl container rises while scaling
 // down, with extra Y-squash to suggest the classic tilt — no real 3D.
 
-const INTRO_MS = 3000 // blue line
-const CRAWL_MS = 16000 // gold crawl
+const INTRO_MS = 3000 // opening line
+const CRAWL_MS = 28000 // gold crawl (unhurried — young readers get through it)
 
 const STORY = [
   'It is a period of endless rivalry.',
@@ -50,16 +50,16 @@ export class CrawlScene extends Phaser.Scene {
       )
     }
 
-    const blue = this.add
+    const intro = this.add
       .text(W / 2, H / 2, 'A long time ago in a galaxy far,\nfar away....', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '30px',
-        color: '#4bd5e7',
+        color: '#ffe81f',
       })
       .setOrigin(0.5)
       .setAlpha(0)
-    this.tweens.add({ targets: blue, alpha: 1, duration: 700 })
-    this.tweens.add({ targets: blue, alpha: 0, delay: INTRO_MS - 700, duration: 600 })
+    this.tweens.add({ targets: intro, alpha: 1, duration: 700 })
+    this.tweens.add({ targets: intro, alpha: 0, delay: INTRO_MS - 700, duration: 600 })
 
     const title = this.add
       .text(0, 0, 'STAR WARS\nBATTLE WARS', {
@@ -102,10 +102,15 @@ export class CrawlScene extends Phaser.Scene {
     if (p >= 1) return this.done()
 
     const H = T.arena.height
-    const scale = 1.15 - 0.95 * p // recede...
+    // Exponential ease-out: screen speed decays in step with the shrink,
+    // so the crawl READS at a constant pace. (Linear motion + shrinking
+    // text looked like it sped up — each line is shorter, so crossing
+    // its own height takes less time.)
+    const q = (1 - Math.exp(-1.75 * p)) / (1 - Math.exp(-1.75))
+    const scale = 1.15 - 0.95 * q // recede...
     this.crawl.setScale(scale, scale * 0.82) // ...with the tilt squash
-    this.crawl.y = H + 60 - (H + 10) * p // climb to the top
-    this.crawl.setAlpha(p < 0.04 ? p / 0.04 : p > 0.85 ? (1 - p) / 0.15 : 1)
+    this.crawl.y = H + 60 - (H + 10) * q // climb to the top
+    this.crawl.setAlpha(p < 0.03 ? p / 0.03 : p > 0.9 ? (1 - p) / 0.1 : 1)
   }
 
   done() {

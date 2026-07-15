@@ -7,15 +7,12 @@
     <title>Star Wars Battle Wars</title>
     <style>
       html, body { margin: 0; padding: 0; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
-      /* `min-height: 100vh` is unreliable on iOS Safari: vh is pinned to
-         the LARGEST possible viewport (address bar hidden), so in
-         landscape — where the address bar eats a much bigger share of a
-         short screen — #app was taller than what's actually visible, and
-         with overflow:hidden the excess (part of the game) was simply
-         unreachable rather than scrollable. `position: fixed; inset: 0`
-         anchors #app to the real visible viewport instead of a vh unit,
-         so Phaser's FIT scaling (which measures this element) always
-         sees the true available space, portrait or landscape. */
+      /* #app is pinned to the top-left and given its real width/height by
+         JS from window.visualViewport (see main.js) — CSS units (vh, and
+         even fixed-inset sizing) track the layout viewport, which mobile
+         Safari AND mobile Chrome let drift from what's actually visible
+         while their toolbars are showing, cutting off the canvas. The
+         inset rule remains as the pre-JS fallback. */
       #app { position: fixed; inset: 0; display: flex; justify-content: center; align-items: center; }
       #app canvas { touch-action: none; }
     </style>
