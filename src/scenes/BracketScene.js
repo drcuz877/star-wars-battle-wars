@@ -35,6 +35,15 @@ export class BracketScene extends Phaser.Scene {
     const W = T.arena.width
     const H = T.arena.height
 
+    // This scene key gets reused many times across one tournament (every
+    // round bounces back here). A `.once('keydown-ENTER', ...)` bound to
+    // the PLAY button below never fires — and never self-removes — if the
+    // player taps/clicks it instead of pressing Enter, so it dangles and
+    // can misfire on a LATER, unrelated Enter press in a future visit to
+    // this scene. Clear the slate on every create() so nothing from a
+    // prior round can leak forward.
+    this.input.keyboard.removeAllListeners()
+
     this.drawBackground(W, H)
 
     let state = loadTournament()

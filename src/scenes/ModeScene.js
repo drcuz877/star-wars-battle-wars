@@ -73,7 +73,9 @@ export class ModeScene extends Phaser.Scene {
       const player = CHARACTERS.find((c) => c.id === savedTournament.playerId)
       const summary = `${player?.name ?? '?'} · ${roundName(savedTournament.currentRound)}`
       this.makeMenuButton('resume', W / 2, y, 'RESUME TOURNAMENT', summary, () => {
-        this.scene.start('Bracket')
+        // Explicit { result: null } — see BracketScene.init() / DifficultyScene
+        // for why a bare scene.start('Bracket') can reapply a stale result.
+        this.scene.start('Bracket', { result: null })
       })
     }
 

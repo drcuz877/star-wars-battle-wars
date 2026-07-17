@@ -40,6 +40,14 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     applyCrispCamera(this)
+    // endRound() below registers `.once('keydown-ENTER'/'keydown-C', ...)`
+    // end-of-match handlers that only self-remove once fired — if the
+    // player clicks an end-of-match option instead of using the key, the
+    // other one dangles and can misfire on a later, unrelated keypress
+    // after Battle restarts/reruns (same key, same scene instance reused
+    // across rematches). Clear the slate on every create().
+    this.input.keyboard.removeAllListeners()
+
     // Floor of the physics world = the arena ground line.
     this.physics.world.setBounds(0, -160, T.arena.width, T.arena.groundY + 160)
 

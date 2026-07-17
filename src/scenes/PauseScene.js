@@ -85,6 +85,13 @@ export class PauseScene extends Phaser.Scene {
     // pending match (Resume takes the identical path).
     const mode = this.scene.get('Battle').mode
     this.scene.stop('Battle')
-    this.scene.start(mode === 'tournament' ? 'Bracket' : 'Select')
+    if (mode === 'tournament') {
+      // Explicit { result: null } — a bare scene.start('Bracket') can
+      // reapply a stale result from Bracket's last activation. See
+      // BracketScene.init() / DifficultyScene.
+      this.scene.start('Bracket', { result: null })
+    } else {
+      this.scene.start('Select')
+    }
   }
 }

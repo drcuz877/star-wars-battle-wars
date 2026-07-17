@@ -255,7 +255,12 @@ export class DifficultyScene extends Phaser.Scene {
     if (this.mode === 'tournament') {
       const state = createTournament(this.p1Id, tier.id)
       saveTournament(state)
-      this.scene.start('Bracket')
+      // Explicit { result: null }, not a bare scene.start('Bracket') — when
+      // no data is passed, Phaser falls back to reusing the LAST data
+      // object that scene key was started with (a stale {result:'loss'}
+      // from a previous tournament's elimination), silently eliminating
+      // this brand-new tournament on arrival. See BracketScene.init().
+      this.scene.start('Bracket', { result: null })
       return
     }
     this.scene.start('Battle', {

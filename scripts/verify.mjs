@@ -557,6 +557,80 @@ try {
   )
   await page.screenshot({ path: `${SHOTS}/08-tournament-results.png` })
 
+  // ---- Regression: NEW TOURNAMENT must start genuinely fresh. (Bug found
+  // 2026-07-17: a bare scene.start('Bracket') with no data reused the
+  // PREVIOUS activation's data object — Phaser's SceneManager falls back to
+  // the last data when none is passed — silently eliminating the brand-new
+  // tournament on arrival. Every Bracket entry point now passes an explicit
+  // { result: null }: DifficultyScene.pick(), ModeScene's Resume button,
+  // PauseScene.quitGame().)
+  const newBtn = await page.evaluate(() =>
+    window.game.scene.keys.Bracket.resultButtons.find((b) => b.id === 'new'),
+  )
+  await page.mouse.click(newBtn.x, newBtn.y)
+  await page.waitForTimeout(300)
+  check('NEW TOURNAMENT reaches character select', await page.evaluate(() => window.game.scene.keys.Select?.mode === 'tournament'))
+
+  await clickCard('luke')
+  await page.waitForTimeout(500)
+  await clickDifficulty('padawan')
+  await page.waitForTimeout(500)
+  const freshState = await page.evaluate(() => window.game.scene.keys.Bracket?.state)
+  check(
+    'a second tournament after NEW TOURNAMENT starts genuinely fresh (not stuck eliminated)',
+    freshState &&
+      freshState.playerId === 'luke' &&
+      freshState.status === 'active' &&
+      freshState.championSeed === null &&
+      freshState.rounds.every((r) => r.every((m) => !m.played)),
+    JSON.stringify({ playerId: freshState?.playerId, status: freshState?.status, championSeed: freshState?.championSeed }),
+  )
+
+  // ---- Regression: quitting mid-tournament-match via Pause must not
+  // corrupt the saved bracket either (same stale-data bug, PauseScene's
+  // own bare scene.start('Bracket') call site).
+  const playPos2 = await page.evaluate(() => window.game.scene.keys.Bracket.playButtonPos)
+  await page.mouse.click(playPos2.x, playPos2.y)
+  await page.waitForTimeout(700)
+  check(
+    'second tournament match launches correctly',
+    await page.evaluate(() => window.game.scene.keys.Battle.mode === 'tournament'),
+  )
+
+  await page.keyboard.press('Escape')
+  await page.waitForTimeout(200)
+  // PauseScene doesn't expose button coordinates (fixed layout, no cards
+  // array) — QUIT GAME sits at (arena width/2, 356) per PauseScene.create().
+  await page.mouse.click(480, 356)
+  await page.waitForTimeout(400)
+  const afterQuit = await page.evaluate(() => ({
+    active: window.game.scene.isActive('Bracket'),
+    state: window.game.scene.keys.Bracket?.state,
+  }))
+  check(
+    'quitting a tournament match via Pause returns to Bracket with the tournament untouched',
+    afterQuit.active && afterQuit.state?.status === 'active' && afterQuit.state?.championSeed === null,
+    JSON.stringify({ active: afterQuit.active, status: afterQuit.state?.status }),
+  )
+
+  // ---- Finish this second tournament too and confirm BACK TO MENU still
+  // cleans up correctly (original coverage, now running after the fixes).
+  const playPos3 = await page.evaluate(() => window.game.scene.keys.Bracket.playButtonPos)
+  await page.mouse.click(playPos3.x, playPos3.y)
+  await page.waitForTimeout(700)
+  await page.evaluate(() => {
+    const s = window.game.scene.keys.Battle
+    s.player.hp = 1
+    s.player.blocking = false
+    s.player.invulnerable = false
+    s.player.dodging = false
+    s.player.counterActive = false
+    s.player.applyHit({ attacker: s.enemy, damage: 999, knockback: 0, hitstunMs: 50, melee: true })
+  })
+  await page.waitForTimeout(1600)
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(700)
+
   const backBtn = await page.evaluate(() =>
     window.game.scene.keys.Bracket.resultButtons.find((b) => b.id === 'menu'),
   )
