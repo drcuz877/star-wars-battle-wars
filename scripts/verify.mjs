@@ -161,12 +161,21 @@ const seededRng = (seed) => {
 
 console.log('') // newline before browser tests
 
-// The opening crawl runs on every load; a click/tap in dead space (no
-// card lives at 10,250) skips it through to character select.
+// The opening crawl runs on every load, gated behind one starting tap/key
+// (doubles as the browser's required gesture to unlock audio — see
+// CrawlScene.js begin()); a second click/tap in dead space (no card lives
+// at 10,250) then skips it through to character select.
 const skipCrawl = async (p, touch = false) => {
   await p.waitForTimeout(500)
-  if (touch) await p.touchscreen.tap(10, 250)
-  else await p.mouse.click(10, 250)
+  if (touch) {
+    await p.touchscreen.tap(10, 250)
+    await p.waitForTimeout(150)
+    await p.touchscreen.tap(10, 250)
+  } else {
+    await p.mouse.click(10, 250)
+    await p.waitForTimeout(150)
+    await p.mouse.click(10, 250)
+  }
   await p.waitForTimeout(800)
 }
 

@@ -284,4 +284,11 @@ function ambientSpace() {
 
 const AMBIENT = {
   crawl: ambientSpace,
+  // Same generative bed for the menu screens (Mode/Select/Difficulty/
+  // Bracket) — Drew asked for music on "all load screens," and a calm
+  // space drone reads fine as menu ambience too. Battle deliberately has
+  // no ambient placeholder: combat SFX already carries the energy, and a
+  // calm drone would clash with a fight rather than fill a silence — that
+  // one stays quiet until the real battle track lands.
+  menu: ambientSpace,
 }

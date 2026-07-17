@@ -73,6 +73,12 @@ export class BracketScene extends Phaser.Scene {
     } else {
       this.renderStandings(state)
       this.renderPlayButton(state)
+      // The in-progress bracket had no way out except playing the next
+      // match (Drew's 2026-07-17 playtest). Tournament state already
+      // autosaves on every result (saveTournament, above and in
+      // DifficultyScene), so leaving here loses nothing — Resume
+      // Tournament from the main menu lands right back on this screen.
+      this.makeBackToMenuLink()
     }
 
     this.add.text(16, H - 20, `build ${__BUILD_TIME__}`, {
@@ -253,6 +259,20 @@ export class BracketScene extends Phaser.Scene {
     box.on('pointerout', () => label.setColor('#ffffff'))
     box.on('pointerdown', launch)
     this.input.keyboard.once('keydown-ENTER', launch)
+  }
+
+  makeBackToMenuLink() {
+    const text = this.add
+      .text(16, 20, '‹ MAIN MENU', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#8a8ab0',
+      })
+      .setInteractive({ useHandCursor: true })
+    text.on('pointerover', () => text.setColor(GOLD))
+    text.on('pointerout', () => text.setColor('#8a8ab0'))
+    text.on('pointerdown', () => this.scene.start('Mode'))
   }
 
   // ---- Results: champion or eliminated ------------------------------------

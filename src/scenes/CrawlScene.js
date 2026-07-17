@@ -5,7 +5,9 @@ import { initAudio, preloadAudio, playMusic } from '../audio/audio.js'
 
 // The opening crawl (Drew's request, deferred since Phase 2): the blue
 // "long time ago" line, then gold text scrolling up and away into the
-// starfield, landing on character select. Any tap or key skips it.
+// starfield, landing on character select. Waits for one starting
+// tap/key (also the browser-required gesture to unlock audio — see
+// begin() below), then any further tap/key skips it.
 //
 // The recede is faked flat: the crawl container rises while scaling
 // down, with extra Y-squash to suggest the classic tilt — no real 3D.
@@ -41,10 +43,11 @@ export class CrawlScene extends Phaser.Scene {
   create() {
     applyCrispCamera(this)
     initAudio(this)
-    playMusic('crawl')
     const W = T.arena.width
     const H = T.arena.height
     this.leaving = false
+    this.started = false
+    this.t = null
 
     this.add.rectangle(W / 2, H / 2, W, H, 0x000000)
     for (let i = 0; i < 80; i++) {
@@ -65,8 +68,6 @@ export class CrawlScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
       .setAlpha(0)
-    this.tweens.add({ targets: intro, alpha: 1, duration: 700 })
-    this.tweens.add({ targets: intro, alpha: 0, delay: INTRO_MS - 700, duration: 600 })
 
     const title = this.add
       .text(0, 0, 'STAR WARS\nBATTLE WARS', {
@@ -97,12 +98,38 @@ export class CrawlScene extends Phaser.Scene {
       .setOrigin(1, 1)
       .setAlpha(0.7)
 
-    this.t = -INTRO_MS
-    this.input.on('pointerdown', () => this.done())
-    this.input.keyboard.on('keydown', () => this.done())
+    // Browsers refuse to play any sound until the page has had a real
+    // click/tap/keypress — the crawl otherwise used to auto-play in total
+    // silence for anyone who just watched it (Drew's 2026-07-17 playtest).
+    // Gate the whole sequence behind one starting gesture, which doubles
+    // as that unlock, then run the intro/crawl exactly as before.
+    const beginPrompt = this.add
+      .text(W / 2, H - 60, 'TAP OR PRESS ANY KEY TO BEGIN', {
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: '18px',
+        fontStyle: 'bold',
+        color: '#ffe81f',
+      })
+      .setOrigin(0.5)
+    this.tweens.add({ targets: beginPrompt, alpha: 0.25, duration: 700, yoyo: true, repeat: -1 })
+
+    const begin = () => {
+      if (this.started) return
+      this.started = true
+      beginPrompt.destroy()
+      playMusic('crawl')
+      this.tweens.add({ targets: intro, alpha: 1, duration: 700 })
+      this.tweens.add({ targets: intro, alpha: 0, delay: INTRO_MS - 700, duration: 600 })
+      this.t = -INTRO_MS
+      this.input.on('pointerdown', () => this.done())
+      this.input.keyboard.on('keydown', () => this.done())
+    }
+    this.input.once('pointerdown', begin)
+    this.input.keyboard.once('keydown', begin)
   }
 
   update(_time, delta) {
+    if (!this.started) return
     this.t += delta
     if (this.t < 0) return
     const p = this.t / CRAWL_MS
