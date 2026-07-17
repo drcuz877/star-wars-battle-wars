@@ -1,4 +1,5 @@
 import Phaser from 'phaser'
+import { registerSW } from 'virtual:pwa-register'
 import { TUNING as T } from './combat/tuning.js'
 import { validateCharacters } from './data/characters.js'
 import { applyHolocronOverrides } from './holocron/overrides.js'
@@ -79,3 +80,38 @@ window.visualViewport?.addEventListener('resize', fitToVisibleViewport)
 window.addEventListener('resize', fitToVisibleViewport)
 window.addEventListener('orientationchange', () => setTimeout(fitToVisibleViewport, 250))
 fitToVisibleViewport()
+
+// Home-screen installs used to need a manual redownload to see updates
+// (checkpoint requirement: unacceptable). registerType: 'prompt' in
+// vite.config.js means a new deploy is downloaded in the background but
+// NOT auto-activated — reloading mid-battle would be jarring — so this
+// just surfaces a tap-to-update toast whenever one's ready, independent
+// of whatever scene happens to be showing.
+const updateSW = registerSW({
+  onNeedRefresh() {
+    const toast = document.createElement('div')
+    toast.textContent = '⬆ New version available — tap to update'
+    Object.assign(toast.style, {
+      position: 'fixed',
+      left: '50%',
+      bottom: '20px',
+      transform: 'translateX(-50%)',
+      background: '#0c1424',
+      color: '#ffe81f',
+      border: '2px solid #ffe81f',
+      borderRadius: '8px',
+      padding: '10px 18px',
+      fontFamily: 'Arial, sans-serif',
+      fontSize: '14px',
+      fontWeight: 'bold',
+      cursor: 'pointer',
+      zIndex: 9999,
+      boxShadow: '0 4px 16px rgba(0,0,0,0.6)',
+    })
+    toast.addEventListener('click', () => {
+      toast.remove()
+      updateSW(true)
+    })
+    document.body.appendChild(toast)
+  },
+})

@@ -32,27 +32,13 @@ export class ModeScene extends Phaser.Scene {
     const W = T.arena.width
     const H = T.arena.height
 
-    const sky = this.add.graphics()
-    sky.fillGradientStyle(0x03030a, 0x03030a, 0x191a33, 0x141428, 1)
-    sky.fillRect(0, 0, W, H)
-    for (let i = 0; i < 110; i++) {
-      const star = this.add.circle(
-        Math.random() * W,
-        Math.random() * H,
-        Math.random() * 1.4 + 0.4,
-        0xffffff,
-        0.2 + Math.random() * 0.6,
-      )
-      if (i % 14 === 0) {
-        this.tweens.add({
-          targets: star,
-          alpha: 0.1,
-          duration: 900 + Math.random() * 1400,
-          yoyo: true,
-          repeat: -1,
-        })
-      }
-    }
+    // Drew's poster (2026-07-17, Nano Banana) as the menu backdrop, scaled
+    // to cover the arena, darkened so the title/buttons stay legible over
+    // a busy image — same "dark overlay behind foreground UI" treatment
+    // used on every other panel in the game.
+    const bg = this.add.image(W / 2, H / 2, 'poster-ensemble')
+    bg.setScale(Math.max(W / bg.width, H / bg.height))
+    this.add.rectangle(W / 2, H / 2, W, H, 0x03030a, 0.55)
 
     const title = this.add
       .text(W / 2, 96, 'STAR WARS\nBATTLE WARS', {

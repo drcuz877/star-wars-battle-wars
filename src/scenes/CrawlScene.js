@@ -38,6 +38,9 @@ export class CrawlScene extends Phaser.Scene {
 
   preload() {
     preloadAudio(this)
+    // Textures are game-global once loaded (same cache every scene reads
+    // from) — loading here means it's ready by the time ModeScene wants it.
+    this.load.image('poster-ensemble', 'images/poster-ensemble.jpg')
   }
 
   create() {

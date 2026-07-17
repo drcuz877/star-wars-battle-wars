@@ -5,6 +5,15 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no" />
     <title>Star Wars Battle Wars</title>
+
+    <!-- iOS ignores the web manifest for home-screen install — needs its
+         own legacy meta tags for the icon and standalone (no browser
+         chrome) behavior. -->
+    <link rel="apple-touch-icon" href="/icons/icon-192.png" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="Battle Wars" />
+    <meta name="theme-color" content="#000000" />
     <style>
       html, body { margin: 0; padding: 0; background: #000; overflow: hidden; touch-action: none; -webkit-user-select: none; user-select: none; }
       /* #app is pinned to the top-left and given its real width/height by
