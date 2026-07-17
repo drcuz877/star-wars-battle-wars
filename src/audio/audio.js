@@ -11,10 +11,11 @@ import { SFX_CLIPS, MUSIC_TRACKS } from './manifest.js'
 //  - Curated clips + music: real files loaded through Phaser's own loader
 //    (see manifest.js). Until Drew supplies a file for a given id, playSfx
 //    silently falls back to a placeholder synth so nothing is ever silent.
-//    playMusic falls back to a generative ambient bed where one exists
-//    (AMBIENT, below — currently just the crawl's space drone) or, failing
-//    that, stays silent — there's no procedural substitute for a real
-//    melodic track.
+//    playMusic falls back to a generative sequenced track where one exists
+//    (AMBIENT, below — crawl/menu/battle all have one) or, failing that,
+//    stays silent. These are still placeholders, not a substitute for
+//    Flow Music's real composition — swapped out automatically the moment
+//    a track is added to manifest.js.
 //
 // initAudio()/preloadAudio() run once, from CrawlScene (the game's first
 // scene) — every other scene just calls playSfx()/playMusic() directly.
@@ -211,107 +212,94 @@ const SYNTH = {
   },
 }
 
-// ---- Generative ambient beds ---------------------------------------------
-// Unlike the one-shot SYNTH sounds above, an ambient bed is long-running:
-// start() returns a handle whose stop() winds everything down cleanly.
-// Placeholder for the crawl/menu Flow Music tracks (audio-brief.md).
-//
-// First pass used a low, closely-spaced drone + fully random high pings —
-// Drew's read (2026-07-17): "sounds like a horror movie." That's a fair
-// call — low bass rumble + isolated random high tones with no rhythm is
-// the standard film-score recipe for dread. This version sits a register
-// higher (warmer, less rumbly), adds a slow major-pentatonic arpeggio for
-// gentle forward motion instead of static drone, and snaps the twinkles to
-// the same scale so they read as melodic sparkle rather than random pings.
+// ---- Generative music beds ------------------------------------------------
+// Placeholders for the Flow Music tracks (audio-brief.md). Two attempts at
+// a static pad + slow arpeggio both missed — "horror movie," then "still
+// don't like it" (2026-07-17 x2). A held chord with no rhythm can't read as
+// "upbeat" no matter how it's voiced; upbeat/tense are rhythmic qualities.
+// This version is an actual tiny sequencer: a beat clock drives a bassline,
+// a chord progression, and light procedural percussion (noise-burst kick/
+// hihat, not samples) together, the same way a real arranger would build
+// energy — not a bigger pad. Still a synthesized placeholder, not a
+// substitute for Flow Music's real composition — flagged to Drew as such.
 
-function ambientSpace() {
-  const t0 = now()
-  const pad = [110, 164.81, 220].map((freq) => {
-    // A3 / E3 / A2 open fifth+octave — same consonant interval as before,
-    // just centered a register higher for warmth instead of rumble.
-    const osc = ctx.createOscillator()
-    osc.type = 'triangle'
-    osc.frequency.value = freq
-    const g = ctx.createGain()
-    g.gain.setValueAtTime(0, t0)
-    g.gain.linearRampToValueAtTime(0.035, t0 + 2.5)
-    osc.connect(g)
-    g.connect(sfxGain)
-    osc.start(t0)
-    return { osc, g }
-  })
-
-  // Gentle brightness shimmer — subtler wobble than before, sparkle rather
-  // than an uneasy wavering.
-  const shimmer = ctx.createOscillator()
-  shimmer.type = 'sine'
-  shimmer.frequency.value = 440
-  const shimmerGain = ctx.createGain()
-  shimmerGain.gain.value = 0.012
-  const lfo = ctx.createOscillator()
-  lfo.frequency.value = 0.1
-  const lfoDepth = ctx.createGain()
-  lfoDepth.gain.value = 0.008
-  lfo.connect(lfoDepth)
-  lfoDepth.connect(shimmerGain.gain)
-  shimmer.connect(shimmerGain)
-  shimmerGain.connect(sfxGain)
-  shimmer.start(t0)
-  lfo.start(t0)
-
-  // Slow ping-pong arpeggio, A major pentatonic (A3..A4) — a hopeful,
-  // unhurried "journey" motif instead of a static hum.
-  const SCALE = [220, 246.94, 277.18, 329.63, 369.99, 440]
+function makeClock(bpm, onTick) {
+  const stepMs = 60000 / bpm / 2 // one tick per eighth note
   let step = 0
-  let dir = 1
-  let arpTimer = null
-  const playNextArpNote = () => {
+  let timer = null
+  const tick = () => {
     if (!ctx) return
-    playTone({ freqStart: SCALE[step], duration: 1.3, type: 'triangle', gainPeak: 0.05, attack: 0.25 })
-    step += dir
-    if (step >= SCALE.length - 1 || step <= 0) dir *= -1
-    arpTimer = setTimeout(playNextArpNote, 1100)
+    onTick(step)
+    step++
+    timer = setTimeout(tick, stepMs)
   }
-  arpTimer = setTimeout(playNextArpNote, 1400)
+  timer = setTimeout(tick, 0)
+  return { stop: () => clearTimeout(timer) }
+}
 
-  // Sparse high twinkles, snapped to the same scale (one octave up) so
-  // they land as consonant sparkle rather than random dissonant pings.
-  const TWINKLE_NOTES = [659.25, 880, 987.77, 1108.73]
-  let twinkleTimer = null
-  const scheduleTwinkle = () => {
-    const delay = 1200 + Math.random() * 2200
-    twinkleTimer = setTimeout(() => {
-      if (!ctx) return
-      const f = TWINKLE_NOTES[Math.floor(Math.random() * TWINKLE_NOTES.length)]
-      playTone({ freqStart: f, duration: 0.6, type: 'sine', gainPeak: 0.03, attack: 0.18 })
-      scheduleTwinkle()
-    }, delay)
-  }
-  scheduleTwinkle()
+function kick() {
+  playTone({ freqStart: 130, freqEnd: 45, duration: 0.14, type: 'sine', gainPeak: 0.1, attack: 0.002 })
+}
+function hihat(gainPeak = 0.02) {
+  playNoise({ duration: 0.045, filterFreqStart: 7000, filterFreqEnd: 6000, filterType: 'highpass', gainPeak, attack: 0.001 })
+}
 
-  return {
-    stop() {
-      clearTimeout(twinkleTimer)
-      clearTimeout(arpTimer)
-      const t = now()
-      for (const { osc, g } of pad) {
-        g.gain.linearRampToValueAtTime(0, t + 0.6)
-        osc.stop(t + 0.7)
-      }
-      shimmerGain.gain.linearRampToValueAtTime(0, t + 0.6)
-      shimmer.stop(t + 0.7)
-      lfo.stop(t + 0.7)
-    },
-  }
+// Crawl + menu: upbeat, adventurous — bright C-major I-V-vi-IV progression
+// (the classic "hopeful journey" turnaround), a walking bass pulse on beats
+// 1 and 3, and an ascending arpeggio bouncing on the off-beats.
+function adventureTheme() {
+  const CHORDS = [
+    { bass: 130.81, arp: [261.63, 329.63, 392.0, 523.25] }, // C
+    { bass: 98.0, arp: [196.0, 246.94, 293.66, 392.0] }, // G
+    { bass: 110.0, arp: [220.0, 261.63, 329.63, 440.0] }, // Am
+    { bass: 87.31, arp: [174.61, 220.0, 261.63, 349.23] }, // F
+  ]
+  const BEATS_PER_BAR = 8
+  return makeClock(112, (step) => {
+    const bar = Math.floor(step / BEATS_PER_BAR) % CHORDS.length
+    const pos = step % BEATS_PER_BAR
+    const chord = CHORDS[bar]
+    if (pos === 0 || pos === 4) {
+      playTone({ freqStart: chord.bass, duration: 0.5, type: 'triangle', gainPeak: 0.065, attack: 0.01 })
+      kick()
+    }
+    hihat()
+    if (pos % 2 === 1) {
+      const note = chord.arp[Math.floor(pos / 2) % chord.arp.length]
+      playTone({ freqStart: note, duration: 0.32, type: 'triangle', gainPeak: 0.045, attack: 0.01 })
+    }
+  })
+}
+
+// Battle: upbeat but tense — A-minor alternating with E (its dominant,
+// carrying the G# leading tone for real harmonic pull), a driving 8th-note
+// bass ostinato instead of a walking pulse, and a syncopated riff on top.
+// Faster tempo (144 vs 112) and continuous bass is what reads as "tense
+// and driving" rather than "dark" — still major-key-adjacent energy, no
+// low sustained rumble (that's the horror-movie mistake, not repeated).
+function battleTheme() {
+  const CHORDS = [
+    { bass: 110.0, arp: [220.0, 261.63, 329.63, 440.0] }, // Am
+    { bass: 82.41, arp: [164.81, 207.65, 246.94, 329.63] }, // E (G# tension)
+  ]
+  const RIFF_ORDER = [3, 1, 3, 0]
+  const BEATS_PER_BAR = 8
+  return makeClock(144, (step) => {
+    const bar = Math.floor(step / BEATS_PER_BAR) % CHORDS.length
+    const pos = step % BEATS_PER_BAR
+    const chord = CHORDS[bar]
+    playTone({ freqStart: chord.bass, duration: 0.22, type: 'sawtooth', gainPeak: 0.05, attack: 0.005 })
+    if (pos % 2 === 0) kick()
+    hihat(0.016)
+    if (pos % 2 === 1) {
+      const note = chord.arp[RIFF_ORDER[Math.floor(pos / 2) % RIFF_ORDER.length]]
+      playTone({ freqStart: note, duration: 0.18, type: 'square', gainPeak: 0.04, attack: 0.005 })
+    }
+  })
 }
 
 const AMBIENT = {
-  crawl: ambientSpace,
-  // Same generative bed for the menu screens (Mode/Select/Difficulty/
-  // Bracket) — Drew asked for music on "all load screens," and a calm
-  // space drone reads fine as menu ambience too. Battle deliberately has
-  // no ambient placeholder: combat SFX already carries the energy, and a
-  // calm drone would clash with a fight rather than fill a silence — that
-  // one stays quiet until the real battle track lands.
-  menu: ambientSpace,
+  crawl: adventureTheme,
+  menu: adventureTheme,
+  battle: battleTheme,
 }
