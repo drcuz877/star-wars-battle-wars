@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { TUNING as T } from '../combat/tuning.js'
 import { applyCrispCamera } from '../util/display.js'
+import { initAudio, preloadAudio, playMusic } from '../audio/audio.js'
 
 // The opening crawl (Drew's request, deferred since Phase 2): the blue
 // "long time ago" line, then gold text scrolling up and away into the
@@ -33,8 +34,14 @@ export class CrawlScene extends Phaser.Scene {
     super('Crawl')
   }
 
+  preload() {
+    preloadAudio(this)
+  }
+
   create() {
     applyCrispCamera(this)
+    initAudio(this)
+    playMusic('crawl')
     const W = T.arena.width
     const H = T.arena.height
     this.leaving = false

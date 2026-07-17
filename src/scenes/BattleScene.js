@@ -10,6 +10,7 @@ import { TouchControls } from '../input/touch.js'
 import { Hud } from '../ui/hud.js'
 import { createArena } from './arenas/index.js'
 import { applyCrispCamera, shakeCamera } from '../util/display.js'
+import { playMusic, stopMusic, playSfx } from '../audio/audio.js'
 
 const byId = (id) => CHARACTERS.find((c) => c.id === id)
 
@@ -40,6 +41,7 @@ export class BattleScene extends Phaser.Scene {
 
   create() {
     applyCrispCamera(this)
+    playMusic('battle')
     // endRound() below registers `.once('keydown-ENTER'/'keydown-C', ...)`
     // end-of-match handlers that only self-remove once fired — if the
     // player clicks an end-of-match option instead of using the key, the
@@ -114,7 +116,10 @@ export class BattleScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(51)
       .setAlpha(0.75)
-    pauseButton.on('pointerdown', () => this.pauseGame())
+    pauseButton.on('pointerdown', () => {
+      playSfx('uiClick')
+      this.pauseGame()
+    })
     this.input.keyboard.on('keydown-ESC', () => this.pauseGame())
     this.input.keyboard.on('keydown-P', () => this.pauseGame())
 
@@ -226,6 +231,8 @@ export class BattleScene extends Phaser.Scene {
     if (this.roundOver) return
     this.roundOver = true
     shakeCamera(this, 200, 0.006)
+    stopMusic()
+    if (winner) playSfx('victory')
 
     const cx = T.arena.width / 2
     const cy = T.arena.height / 2
@@ -308,6 +315,9 @@ export class BattleScene extends Phaser.Scene {
       .setInteractive({ useHandCursor: true })
     text.on('pointerover', () => text.setColor('#ffe81f'))
     text.on('pointerout', () => text.setColor('#ffffff'))
-    text.on('pointerdown', onSelect)
+    text.on('pointerdown', () => {
+      playSfx('uiClick')
+      onSelect()
+    })
   }
 }

@@ -4,6 +4,7 @@ import { deriveStats } from './derive.js'
 import { startSpecial, updateSpecial, cancelSpecial, specialLocks } from './specials.js'
 import { createPuppet } from '../art/puppet.js'
 import { shakeCamera } from '../util/display.js'
+import { playSfx } from '../audio/audio.js'
 
 // One fighter: a physics rectangle plus combat state (HP, stamina, special
 // meter, swing/hitstun timers). The player and the AI both drive a Fighter
@@ -216,7 +217,10 @@ export class Fighter {
       } else if (this.onGround) {
         this.body.setVelocityX(0)
       }
-      if (intents.jumpPressed && this.onGround) this.body.setVelocityY(-T.fighter.jumpVelocity)
+      if (intents.jumpPressed && this.onGround) {
+        this.body.setVelocityY(-T.fighter.jumpVelocity)
+        playSfx('jump')
+      }
     } else if (this.blocking || firePlanted) {
       this.body.setVelocityX(0)
     }
@@ -246,6 +250,7 @@ export class Fighter {
     this.cooldown = T.attack.windupMs + T.attack.activeMs + this.d.attackCooldownMs
     this.stamina -= this.d.staminaCost
     this.staminaPause = T.attack.windupMs + T.attack.activeMs + T.stamina.regenDelayMs
+    playSfx(this.d.archetype === 'saber' ? 'saberSwing' : 'brawlerSwing')
   }
 
   fireBolt() {
@@ -253,6 +258,7 @@ export class Fighter {
     this.stamina -= this.d.staminaCost
     this.staminaPause = T.attack.windupMs + T.attack.activeMs + T.stamina.regenDelayMs
     this.fireRoot = T.bolt.fireRootMs
+    playSfx('blasterShot')
     const x = this.rect.x + this.facing * (T.fighter.width / 2 + 12)
     const y = this.rect.y - 12
     this.scene.projectiles.spawn({
@@ -286,6 +292,7 @@ export class Fighter {
     // Dodging TOWARD the opponent keeps full speed.
     const backpedal = dir === -this.facing
     this.body.setVelocityX(dir * T.dodge.speed * (backpedal ? T.fighter.backpedalMult : 1))
+    playSfx('dodge')
   }
 
   endSwing() {
@@ -341,6 +348,7 @@ export class Fighter {
       const reflect = this.counterReflect
       cancelSpecial(this)
       this.popup('COUNTER!', '#ffffff', 18)
+      playSfx('saberClash')
       attacker.applyHit({ attacker: this, damage: reflect, knockback: 380, hitstunMs: 350, charges: false })
       return { missed: true }
     }
@@ -372,12 +380,14 @@ export class Fighter {
       this.hitstun = T.defend.blockedHitstunMs
       this.body.setVelocityX(dir * knockback * 0.4)
       if (charges) attacker?.gainMeter(T.attack.meterGainOnBlocked)
+      playSfx('blockedHit')
     } else {
       if (this.specialRun) cancelSpecial(this) // a clean hit interrupts a special
       this.hitstun = hitstunMs
       this.body.setVelocityX(dir * knockback)
       if (melee) this.body.setVelocityY(-140)
       if (charges) attacker?.gainMeter(T.attack.meterGainOnHit * attacker.d.meterGainMult)
+      playSfx('hitImpact')
     }
 
     this.hp = Math.max(0, this.hp - dmg)
@@ -427,6 +437,7 @@ export class Fighter {
 
   knockOut(dir) {
     this.ko = true
+    playSfx('ko')
     if (this.specialRun) cancelSpecial(this)
     this.endSwing()
     this.weapon.setVisible(false)

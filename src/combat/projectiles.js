@@ -1,5 +1,6 @@
 import Phaser from 'phaser'
 import { TUNING as T } from './tuning.js'
+import { playSfx } from '../audio/audio.js'
 
 // All flying things: blaster bolts, special projectiles (missiles, saber
 // throws, Whistling Birds), and deflected bolts on their way back.
@@ -134,6 +135,7 @@ export class Projectiles {
           bolt.color = 0x66ffff
           this.burst(bolt.x, bolt.y, 0x66ffff, bolt.vx, false)
           f.popup('DEFLECT', '#66ffff')
+          playSfx('saberClash')
           continue
         }
 

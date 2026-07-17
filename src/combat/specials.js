@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { TUNING as T } from './tuning.js'
 import { specialConfig } from './derive.js'
+import { playSfx } from '../audio/audio.js'
 
 // The 9 mechanical templates behind all 28 signature specials. Every
 // character's special entry in characters.js names one of these plus any
@@ -19,6 +20,7 @@ export function startSpecial(f) {
   f.special = 0
   f.specialRun = run
   f.popup(cfg.name.toUpperCase(), '#ffe81f', 17)
+  playSfx('specialCast')
   const tpl = TEMPLATES[cfg.template]
   tpl.start?.(f, run)
   // Instant specials (grip, buff, heal, sureShot) finish on the spot —

@@ -3,6 +3,7 @@ import { TUNING as T } from '../combat/tuning.js'
 import { CHARACTERS, overall } from '../data/characters.js'
 import { portraitKey } from '../art/puppet.js'
 import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
+import { playMusic, playSfx } from '../audio/audio.js'
 
 const ARCHETYPE_ICON = { saber: '🗡', blaster: '🔫', brawler: '🐻' }
 const GOLD = '#ffe81f'
@@ -21,6 +22,8 @@ export class SelectScene extends Phaser.Scene {
 
   create() {
     applyCrispCamera(this)
+    playMusic('menu')
+    this.input.on('pointerdown', () => playSfx('uiClick'))
     const W = T.arena.width
     const H = T.arena.height
 

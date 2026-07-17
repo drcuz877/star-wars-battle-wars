@@ -8,6 +8,7 @@ import { portraitKey } from '../art/puppet.js'
 import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
 import { createTournament } from '../tournament/bracket.js'
 import { saveTournament } from '../tournament/state.js'
+import { playMusic, playSfx } from '../audio/audio.js'
 
 const GOLD = '#ffe81f'
 
@@ -27,6 +28,8 @@ export class DifficultyScene extends Phaser.Scene {
 
   create() {
     applyCrispCamera(this)
+    playMusic('menu')
+    this.input.on('pointerdown', () => playSfx('uiClick'))
     const W = T.arena.width
     const H = T.arena.height
 

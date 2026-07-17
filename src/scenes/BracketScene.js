@@ -12,6 +12,7 @@ import {
   roundName,
   competitorId,
 } from '../tournament/bracket.js'
+import { playMusic, playSfx } from '../audio/audio.js'
 
 const GOLD = '#ffe81f'
 const byId = (id) => CHARACTERS.find((c) => c.id === id)
@@ -43,6 +44,8 @@ export class BracketScene extends Phaser.Scene {
     // this scene. Clear the slate on every create() so nothing from a
     // prior round can leak forward.
     this.input.keyboard.removeAllListeners()
+    playMusic('menu')
+    this.input.on('pointerdown', () => playSfx('uiClick'))
 
     this.drawBackground(W, H)
 

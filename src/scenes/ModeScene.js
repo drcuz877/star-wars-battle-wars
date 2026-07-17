@@ -4,6 +4,7 @@ import { applyCrispCamera } from '../util/display.js'
 import { loadTournament } from '../tournament/state.js'
 import { roundName } from '../tournament/bracket.js'
 import { CHARACTERS } from '../data/characters.js'
+import { playMusic, playSfx } from '../audio/audio.js'
 
 const GOLD = '#ffe81f'
 
@@ -16,6 +17,8 @@ export class ModeScene extends Phaser.Scene {
 
   create() {
     applyCrispCamera(this)
+    playMusic('menu')
+    this.input.on('pointerdown', () => playSfx('uiClick'))
     const W = T.arena.width
     const H = T.arena.height
 
