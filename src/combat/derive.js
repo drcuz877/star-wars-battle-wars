@@ -20,7 +20,8 @@ export function deriveStats(character) {
     maxHp: Math.round(
       d.hp.base + d.hp.perDef * s.def + d.hp.perStr * s.str + (isBrawler ? d.hp.brawlerBonus : 0),
     ),
-    damage: d.meleeDamage.base + d.meleeDamage.perStr * s.str,
+    damage:
+      (d.meleeDamage.base + d.meleeDamage.perStr * s.str) * (isBrawler ? d.brawlerDamageMult : 1),
     boltDamage: d.boltDamage.base + d.boltDamage.perStr * s.str,
     moveSpeed: d.moveSpeed.base + d.moveSpeed.perSpd * s.spd,
     attackCooldownMs: d.attackCooldownMs.base + d.attackCooldownMs.perSpd * s.spd,

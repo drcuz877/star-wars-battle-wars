@@ -35,6 +35,16 @@ export const TUNING = {
   derive: {
     hp: { base: 60, perDef: 1.0, perStr: 0.4, brawlerBonus: 8 },
     meleeDamage: { base: 4, perStr: 0.3 },
+    // Brawlers' HP/brace (below) is their compensation for having no
+    // ranged option and having to close distance under fire — but their
+    // naturally high canon STR (lore-authored toughness) rides the same
+    // perStr coefficient that drives damage, so it was ALSO inflating
+    // their offense on top of their survivability, compounding into a net
+    // advantage rather than parity (sim.js data, 2026-07-17: Grievous 62
+    // OVR beat Ventress 72 OVR ~92% of the time). This trims the offense
+    // side only — the survivability compensation (hp.brawlerBonus,
+    // braceMult below) is untouched.
+    brawlerDamageMult: 0.8,
     boltDamage: { base: 3.5, perStr: 0.28 },
     moveSpeed: { base: 200, perSpd: 4 },
     attackCooldownMs: { base: 540, perSpd: -9 }, // faster attacks at high SPD
