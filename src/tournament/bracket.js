@@ -69,7 +69,11 @@ export function createTournament(playerId, difficultyId, rng = Math.random) {
   const playerSlot = allIds.indexOf(playerId)
 
   return {
-    version: 1,
+    version: 2,
+    format: 'knockout',
+    stage: 'knockout',
+    rr: null,
+    rrEliminated: false,
     createdAt: Date.now(),
     updatedAt: Date.now(),
 

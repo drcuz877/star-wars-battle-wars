@@ -3,6 +3,7 @@ import { TUNING as T } from '../combat/tuning.js'
 import { applyCrispCamera } from '../util/display.js'
 import { loadTournament } from '../tournament/state.js'
 import { roundName } from '../tournament/bracket.js'
+import { matchdayCount } from '../tournament/roundrobin.js'
 import { CHARACTERS } from '../data/characters.js'
 import { playMusic, playSfx } from '../audio/audio.js'
 import { isHolocronUnlocked, unlockHolocron } from '../holocron/unlock.js'
@@ -67,18 +68,25 @@ export class ModeScene extends Phaser.Scene {
     })
 
     y += 88
-    this.makeMenuButton('tournament', W / 2, y, 'TOURNAMENT', 'Random 16-fighter bracket. Win it all.', () => {
-      this.scene.start('Select', { mode: 'tournament' })
+    this.makeMenuButton('tournament', W / 2, y, 'TOURNAMENT', 'Knockout, group play, or a full league season.', () => {
+      this.scene.start('Format')
     })
 
     if (savedTournament && savedTournament.status === 'active') {
       y += 88
       const player = CHARACTERS.find((c) => c.id === savedTournament.playerId)
-      const summary = `${player?.name ?? '?'} · ${roundName(savedTournament.currentRound)}`
+      // Round-robin stages resume on the standings screen; knockout stages
+      // (including plain knockout tournaments) resume on the bracket.
+      const inRR = savedTournament.stage === 'roundrobin'
+      const formatLabel = { group: 'Group Play', league: 'League' }[savedTournament.format]
+      const progress = inRR
+        ? `${formatLabel} · Matchday ${savedTournament.rr.matchday + 1}/${matchdayCount(savedTournament)}`
+        : `${formatLabel ? formatLabel + ' · ' : ''}${roundName(savedTournament.currentRound)}`
+      const summary = `${player?.name ?? '?'} · ${progress}`
       this.makeMenuButton('resume', W / 2, y, 'RESUME TOURNAMENT', summary, () => {
         // Explicit { result: null } — see BracketScene.init() / DifficultyScene
         // for why a bare scene.start('Bracket') can reapply a stale result.
-        this.scene.start('Bracket', { result: null })
+        this.scene.start(inRR ? 'Standings' : 'Bracket', { result: null })
       })
     }
 

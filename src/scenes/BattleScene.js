@@ -34,9 +34,15 @@ export class BattleScene extends Phaser.Scene {
     if (data?.arena) this.arenaId = data.arena
     this.arenaId = this.arenaId ?? 'random'
     // 'single' = normal Rematch/Change Character end menu. 'tournament' =
-    // a single Continue that reports win/loss back to BracketScene, which
-    // owns all advance/champion/eliminate logic.
+    // a single Continue that reports win/loss back to the tournament hub,
+    // which owns all advance/champion/eliminate logic. Which hub that is
+    // depends on the stage: 'Bracket' (knockout) or 'Standings'
+    // (group/league round-robin) — the launching scene passes `ret`
+    // explicitly, since this scene instance is reused across matches and
+    // a stale value would report the result to the wrong screen.
     this.mode = data?.mode ?? this.mode ?? 'single'
+    if (data?.ret) this.returnTo = data.ret
+    this.returnTo = this.returnTo ?? 'Bracket'
   }
 
   create() {
@@ -266,10 +272,10 @@ export class BattleScene extends Phaser.Scene {
 
     this.time.delayedCall(900, () => {
       if (this.mode === 'tournament') {
-        // No branching menu here — Bracket owns advance/champion/eliminate.
+        // No branching menu here — the hub owns advance/champion/eliminate.
         // A draw (winner === null) counts as not-a-win, same as a loss.
         const playerWon = winner === this.player
-        const goToBracket = () => this.scene.start('Bracket', { result: playerWon ? 'win' : 'loss' })
+        const goToBracket = () => this.scene.start(this.returnTo, { result: playerWon ? 'win' : 'loss' })
         this.makeEndOption(cx, cy + 60, playerWon ? 'CONTINUE' : 'SEE RESULTS', goToBracket)
         this.add
           .text(cx, cy + 100, 'ENTER to continue', {

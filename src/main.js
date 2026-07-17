@@ -8,7 +8,9 @@ import { CrawlScene } from './scenes/CrawlScene.js'
 import { ModeScene } from './scenes/ModeScene.js'
 import { SelectScene } from './scenes/SelectScene.js'
 import { DifficultyScene } from './scenes/DifficultyScene.js'
+import { FormatScene } from './scenes/FormatScene.js'
 import { BracketScene } from './scenes/BracketScene.js'
+import { StandingsScene } from './scenes/StandingsScene.js'
 import { BattleScene } from './scenes/BattleScene.js'
 import { PauseScene } from './scenes/PauseScene.js'
 import { SettingsScene } from './scenes/SettingsScene.js'
@@ -50,7 +52,9 @@ const game = new Phaser.Game({
     ModeScene,
     SelectScene,
     DifficultyScene,
+    FormatScene,
     BracketScene,
+    StandingsScene,
     BattleScene,
     PauseScene,
     SettingsScene,

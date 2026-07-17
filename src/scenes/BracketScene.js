@@ -56,6 +56,13 @@ export class BracketScene extends Phaser.Scene {
       return
     }
 
+    if (state.stage === 'roundrobin') {
+      // Group/league tournaments still in their pool stage live on the
+      // standings screen — this scene only owns the knockout rounds.
+      this.scene.start('Standings', { result: null })
+      return
+    }
+
     if (this.pendingResult) {
       state = recordPlayerResult(state, this.pendingResult === 'win')
       saveTournament(state)
@@ -202,8 +209,10 @@ export class BracketScene extends Phaser.Scene {
     const oppId = playerOpponentId(state)
     const opp = oppId ? byId(oppId) : null
 
+    const title =
+      { group: 'GROUP PLAY — KNOCKOUT', league: 'LEAGUE — KNOCKOUT' }[state.format] ?? 'TOURNAMENT'
     this.add
-      .text(W / 2, 34, 'TOURNAMENT', {
+      .text(W / 2, 34, title, {
         fontFamily: 'Arial Black, Arial, sans-serif',
         fontSize: '26px',
         fontStyle: 'bold',
@@ -249,6 +258,7 @@ export class BracketScene extends Phaser.Scene {
     const launch = () => {
       this.scene.start('Battle', {
         mode: 'tournament',
+        ret: 'Bracket', // explicit — Battle's returnTo is sticky across matches
         p1: state.playerId,
         p2: playerOpponentId(state),
         difficulty: state.difficulty,
@@ -302,9 +312,16 @@ export class BracketScene extends Phaser.Scene {
       .setOrigin(0.5)
       .setDepth(60)
 
+    // Pool-stage eliminations never played a knockout round, so there's
+    // no round name to cite — say what actually happened.
+    const outIn = state.rrEliminated
+      ? state.format === 'league'
+        ? 'You missed the top 8 of your division.'
+        : "You didn't survive the group stage."
+      : `You went out in ${roundName(state.eliminatedRound)}.`
     const sub = playerWonAll
       ? `${champ?.name?.toUpperCase() ?? '?'} WINS THE TOURNAMENT`
-      : `You went out in ${roundName(state.eliminatedRound)}.\nChampion: ${champ?.name ?? '?'}`
+      : `${outIn}\nChampion: ${champ?.name ?? '?'}`
     this.add
       .text(cx, cy - 14, sub, {
         fontFamily: 'Arial, sans-serif',
@@ -317,7 +334,8 @@ export class BracketScene extends Phaser.Scene {
       .setDepth(60)
 
     this.resultButtons = [] // {id, x, y} — also used by the automated verify script
-    this.makeResultOption('new', cx, cy + 50, 'NEW TOURNAMENT', () => this.scene.start('Select', { mode: 'tournament' }))
+    // Back through the format picker, so a new run can be a different kind.
+    this.makeResultOption('new', cx, cy + 50, 'NEW TOURNAMENT', () => this.scene.start('Format'))
     this.makeResultOption('menu', cx, cy + 90, 'BACK TO MENU', () => this.scene.start('Mode'))
   }
 

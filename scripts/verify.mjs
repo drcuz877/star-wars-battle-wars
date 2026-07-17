@@ -341,8 +341,15 @@ const pairsMeetOnce = (pool) => {
 // Test 14: Save-state migration (pure normalizeTournament, no browser).
 {
   const rng = seededRng(8042)
-  const v1 = createTournament('luke', 'knight', rng) // bracket.js still emits v1
-  const migrated = normalizeTournament(JSON.parse(JSON.stringify(v1)))
+  // Reconstruct a Phase 5-era v1 save (createTournament emits v2 now):
+  // same shape minus the Phase 7 format/stage/rr fields.
+  const v1 = JSON.parse(JSON.stringify(createTournament('luke', 'knight', rng)))
+  v1.version = 1
+  delete v1.format
+  delete v1.stage
+  delete v1.rr
+  delete v1.rrEliminated
+  const migrated = normalizeTournament(v1)
   check(
     'normalize: v1 knockout save migrates to v2 knockout intact',
     migrated !== null &&
@@ -698,7 +705,18 @@ try {
   await page.evaluate(() => window.game.scene.start('Mode'))
   await page.waitForTimeout(300)
   await clickModeButton('tournament')
-  check('TOURNAMENT reaches character select', await page.evaluate(() => window.game.scene.keys.Select.mode === 'tournament'))
+  check('TOURNAMENT opens the format picker', await page.evaluate(() => window.game.scene.isActive('Format')))
+
+  const clickFormatButton = async (id) => {
+    const pos = await page.evaluate((fid) => window.game.scene.keys.Format.buttons.find((b) => b.id === fid), id)
+    await page.mouse.click(pos.x, pos.y)
+    await page.waitForTimeout(250)
+  }
+  await clickFormatButton('knockout')
+  check(
+    'KNOCKOUT reaches character select in tournament mode',
+    await page.evaluate(() => window.game.scene.keys.Select.mode === 'tournament' && window.game.scene.keys.Select.format === 'knockout'),
+  )
 
   await clickCard('yoda') // one pick only — tournament mode skips the opponent step
   await page.waitForTimeout(500)
@@ -788,7 +806,11 @@ try {
   )
   await page.mouse.click(newBtn.x, newBtn.y)
   await page.waitForTimeout(300)
-  check('NEW TOURNAMENT reaches character select', await page.evaluate(() => window.game.scene.keys.Select?.mode === 'tournament'))
+  // NEW TOURNAMENT routes back through the format picker (Phase 7), so a
+  // new run can be a different kind of tournament.
+  check('NEW TOURNAMENT reopens the format picker', await page.evaluate(() => window.game.scene.isActive('Format')))
+  await clickFormatButton('knockout')
+  check('...and KNOCKOUT reaches character select', await page.evaluate(() => window.game.scene.keys.Select?.mode === 'tournament'))
 
   await clickCard('luke')
   await page.waitForTimeout(500)
@@ -873,6 +895,162 @@ try {
     'the finished tournament is cleared (no Resume button offered)',
     await page.evaluate(() => !window.game.scene.keys.Mode.buttons.some((b) => b.id === 'resume')),
   )
+
+  // ---------- Group Play flow (Phase 7): pool stage → knockout handoff ----------
+  await clickModeButton('tournament')
+  await clickFormatButton('group')
+  await clickCard('luke')
+  await page.waitForTimeout(400)
+  await clickDifficulty('initiate')
+  await page.waitForTimeout(500)
+
+  const groupState = await page.evaluate(() => {
+    const s = window.game.scene.keys.Standings?.state
+    if (!s) return null
+    return {
+      active: window.game.scene.isActive('Standings'),
+      format: s.format,
+      stage: s.stage,
+      pools: s.rr.pools.length,
+      poolSizes: s.rr.pools.every((p) => p.members.length === 4),
+      matchday: s.rr.matchday,
+    }
+  })
+  check(
+    'GROUP PLAY creates a 7x4 pool tournament and reaches Standings',
+    groupState &&
+      groupState.active &&
+      groupState.format === 'group' &&
+      groupState.stage === 'roundrobin' &&
+      groupState.pools === 7 &&
+      groupState.poolSizes &&
+      groupState.matchday === 0,
+    JSON.stringify(groupState),
+  )
+  await page.screenshot({ path: `${SHOTS}/09-group-standings.png` })
+
+  // Drive one real matchday: play button → battle → forced win → back here.
+  const forceWinAndContinue = async () => {
+    await page.evaluate(() => {
+      const s = window.game.scene.keys.Battle
+      s.enemy.hp = 1
+      s.enemy.blocking = false
+      s.enemy.invulnerable = false
+      s.enemy.dodging = false
+      s.enemy.counterActive = false
+      s.enemy.applyHit({ attacker: s.player, damage: 999, knockback: 0, hitstunMs: 50, melee: true })
+    })
+    await page.waitForTimeout(1600)
+    await page.keyboard.press('Enter')
+    await page.waitForTimeout(700)
+  }
+
+  const standingsPlay = await page.evaluate(() => window.game.scene.keys.Standings.playButtonPos)
+  await page.mouse.click(standingsPlay.x, standingsPlay.y)
+  await page.waitForTimeout(700)
+  const groupMatch = await page.evaluate(() => {
+    const s = window.game.scene.keys.Battle
+    return { mode: s.mode, ret: s.returnTo, p1: s.p1Char.id }
+  })
+  check(
+    'group matchday launches a tournament battle that reports back to Standings',
+    groupMatch.mode === 'tournament' && groupMatch.ret === 'Standings' && groupMatch.p1 === 'luke',
+    JSON.stringify(groupMatch),
+  )
+
+  await forceWinAndContinue()
+  const afterWin = await page.evaluate(() => {
+    const s = window.game.scene.keys.Standings?.state
+    return {
+      active: window.game.scene.isActive('Standings'),
+      matchday: s?.rr.matchday,
+      allPlayed: s?.rr.pools.every((p) => p.fixtures[0].every((fx) => fx.played)),
+    }
+  })
+  check(
+    'a group win advances the matchday and simulates the rest of it everywhere',
+    afterWin.active && afterWin.matchday === 1 && afterWin.allPlayed,
+    JSON.stringify(afterWin),
+  )
+
+  // Leave from the standings screen and resume — must land back on
+  // Standings (round-robin stage), not the bracket.
+  await page.mouse.click(50, 27) // '‹ MAIN MENU' link, top-left
+  await page.waitForTimeout(400)
+  const resumeBtn2 = await page.evaluate(() => window.game.scene.keys.Mode.buttons.find((b) => b.id === 'resume'))
+  check('mid-group-stage tournament offers Resume on the main menu', !!resumeBtn2)
+  await page.mouse.click(resumeBtn2.x, resumeBtn2.y)
+  await page.waitForTimeout(400)
+  check(
+    'Resume during the pool stage lands on Standings with progress intact',
+    await page.evaluate(
+      () => window.game.scene.isActive('Standings') && window.game.scene.keys.Standings.state.rr.matchday === 1,
+    ),
+  )
+
+  // Win the last two matchdays — completing the pool stage must hand off
+  // to the knockout bracket automatically (Luke at 3-0 always qualifies).
+  for (let d = 0; d < 2; d++) {
+    const pos = await page.evaluate(() => window.game.scene.keys.Standings.playButtonPos)
+    await page.mouse.click(pos.x, pos.y)
+    await page.waitForTimeout(700)
+    await forceWinAndContinue()
+  }
+  const knockoutState = await page.evaluate(() => {
+    const s = window.game.scene.keys.Bracket?.state
+    return {
+      active: window.game.scene.isActive('Bracket'),
+      stage: s?.stage,
+      format: s?.format,
+      seeds: s?.seeds?.length,
+      hasPlayer: s?.seeds?.includes('luke'),
+      status: s?.status,
+    }
+  })
+  check(
+    'completing the group stage hands off to the knockout bracket, player seeded',
+    knockoutState.active &&
+      knockoutState.stage === 'knockout' &&
+      knockoutState.format === 'group' &&
+      knockoutState.seeds === 16 &&
+      knockoutState.hasPlayer &&
+      knockoutState.status === 'active',
+    JSON.stringify(knockoutState),
+  )
+  await page.screenshot({ path: `${SHOTS}/10-group-knockout.png` })
+
+  // ---------- League flow (Phase 7): creation + resume routing only (the
+  // 13-matchday season is covered by the engine unit tests above). ----------
+  await page.mouse.click(50, 27) // Bracket's '‹ MAIN MENU' link
+  await page.waitForTimeout(400)
+  await clickModeButton('tournament')
+  await clickFormatButton('league')
+  await clickCard('vader')
+  await page.waitForTimeout(400)
+  await clickDifficulty('initiate')
+  await page.waitForTimeout(500)
+  const leagueState = await page.evaluate(() => {
+    const s = window.game.scene.keys.Standings?.state
+    if (!s) return null
+    return {
+      active: window.game.scene.isActive('Standings'),
+      format: s.format,
+      pools: s.rr.pools.length,
+      poolSizes: s.rr.pools.every((p) => p.members.length === 14),
+      matchdays: s.rr.pools[0].fixtures.length,
+    }
+  })
+  check(
+    'LEAGUE creates 2 divisions of 14 with a 13-matchday season and reaches Standings',
+    leagueState &&
+      leagueState.active &&
+      leagueState.format === 'league' &&
+      leagueState.pools === 2 &&
+      leagueState.poolSizes &&
+      leagueState.matchdays === 13,
+    JSON.stringify(leagueState),
+  )
+  await page.screenshot({ path: `${SHOTS}/11-league-standings.png` })
 
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   await page.close()

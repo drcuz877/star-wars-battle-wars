@@ -7,6 +7,7 @@ import { loadJSON, saveJSON } from '../util/storage.js'
 import { portraitKey } from '../art/puppet.js'
 import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
 import { createTournament } from '../tournament/bracket.js'
+import { createGroupTournament, createLeagueTournament } from '../tournament/roundrobin.js'
 import { saveTournament } from '../tournament/state.js'
 import { playMusic, playSfx } from '../audio/audio.js'
 
@@ -22,6 +23,7 @@ export class DifficultyScene extends Phaser.Scene {
 
   init(data) {
     this.mode = data?.mode ?? 'single'
+    this.format = data?.format ?? 'knockout'
     this.p1Id = data.p1
     this.p2Id = data.p2
   }
@@ -256,14 +258,19 @@ export class DifficultyScene extends Phaser.Scene {
   pick(tier) {
     saveJSON('lastDifficulty', tier.id)
     if (this.mode === 'tournament') {
-      const state = createTournament(this.p1Id, tier.id)
+      const state =
+        this.format === 'group'
+          ? createGroupTournament(this.p1Id, tier.id)
+          : this.format === 'league'
+            ? createLeagueTournament(this.p1Id, tier.id)
+            : createTournament(this.p1Id, tier.id)
       saveTournament(state)
-      // Explicit { result: null }, not a bare scene.start('Bracket') — when
-      // no data is passed, Phaser falls back to reusing the LAST data
-      // object that scene key was started with (a stale {result:'loss'}
-      // from a previous tournament's elimination), silently eliminating
-      // this brand-new tournament on arrival. See BracketScene.init().
-      this.scene.start('Bracket', { result: null })
+      // Explicit { result: null }, not a bare scene.start(...) — when no
+      // data is passed, Phaser falls back to reusing the LAST data object
+      // that scene key was started with (a stale {result:'loss'} from a
+      // previous tournament's elimination), silently eliminating this
+      // brand-new tournament on arrival. See BracketScene.init().
+      this.scene.start(this.format === 'knockout' ? 'Bracket' : 'Standings', { result: null })
       return
     }
     this.scene.start('Battle', {

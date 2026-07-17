@@ -18,6 +18,8 @@ export class SelectScene extends Phaser.Scene {
 
   init(data) {
     this.mode = data?.mode ?? 'single'
+    // Tournament format picked on FormatScene, passed through to Difficulty.
+    this.format = data?.format ?? 'knockout'
   }
 
   create() {
@@ -200,7 +202,7 @@ export class SelectScene extends Phaser.Scene {
       // 15 are drawn randomly by createTournament(). Skip straight to
       // Difficulty instead of prompting for an opponent.
       if (this.mode === 'tournament') {
-        this.scene.start('Difficulty', { mode: 'tournament', p1: c.id })
+        this.scene.start('Difficulty', { mode: 'tournament', format: this.format, p1: c.id })
         return
       }
       this.picking = 'p2'
