@@ -3,8 +3,7 @@ import { TUNING as T } from '../combat/tuning.js'
 import { applyCrispCamera } from '../util/display.js'
 import { playSfx } from '../audio/audio.js'
 
-// Overlay launched on top of a paused BattleScene. Settings entries
-// (control remapping, sound) arrive with the Phase 6 settings work.
+// Overlay launched on top of a paused BattleScene.
 export class PauseScene extends Phaser.Scene {
   constructor() {
     super('Pause')
@@ -18,7 +17,7 @@ export class PauseScene extends Phaser.Scene {
     this.add.rectangle(cx, cy, T.arena.width, T.arena.height, 0x000000, 0.65)
 
     // Panel in the menus' shared language: deep blue, gold-edged.
-    this.add.rectangle(cx, cy + 10, 380, 330, 0x0c1424, 0.92).setStrokeStyle(2, 0xffe81f, 0.5)
+    this.add.rectangle(cx, cy + 20, 380, 370, 0x0c1424, 0.92).setStrokeStyle(2, 0xffe81f, 0.5)
 
     this.add
       .text(cx, 150, 'PAUSED', {
@@ -32,19 +31,13 @@ export class PauseScene extends Phaser.Scene {
       })
       .setOrigin(0.5)
 
-    this.makeOption(cx, 240, 'RESUME', () => this.resumeBattle())
-    this.makeOption(cx, 298, 'RESTART MATCH', () => this.restartBattle())
-    this.makeOption(cx, 356, 'QUIT GAME', () => this.quitGame())
+    this.makeOption(cx, 226, 'RESUME', () => this.resumeBattle())
+    this.makeOption(cx, 274, 'SETTINGS', () => this.scene.start('Settings'))
+    this.makeOption(cx, 322, 'RESTART MATCH', () => this.restartBattle())
+    this.makeOption(cx, 370, 'QUIT GAME', () => this.quitGame())
 
     this.add
-      .text(cx, 408, 'settings (controls · sound) coming in a later phase', {
-        fontFamily: 'Arial, sans-serif',
-        fontSize: '13px',
-        color: '#666688',
-      })
-      .setOrigin(0.5)
-    this.add
-      .text(cx, 430, 'ESC or P also resumes', {
+      .text(cx, 412, 'ESC or P also resumes', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '12px',
         color: '#666688',
@@ -72,6 +65,9 @@ export class PauseScene extends Phaser.Scene {
 
   resumeBattle() {
     this.scene.stop()
+    // Picks up any keymap change made in Settings immediately, instead of
+    // waiting for the next rematch/new battle to rebuild the Key objects.
+    this.scene.get('Battle').keyboard?.rebind()
     this.scene.resume('Battle')
   }
 

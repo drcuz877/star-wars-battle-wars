@@ -9,6 +9,7 @@ import { DifficultyScene } from './scenes/DifficultyScene.js'
 import { BracketScene } from './scenes/BracketScene.js'
 import { BattleScene } from './scenes/BattleScene.js'
 import { PauseScene } from './scenes/PauseScene.js'
+import { SettingsScene } from './scenes/SettingsScene.js'
 
 // Clamp any stat typos in characters.js before anything reads them.
 validateCharacters()
@@ -38,7 +39,7 @@ const game = new Phaser.Game({
     width: T.arena.width * RENDER_SCALE,
     height: T.arena.height * RENDER_SCALE,
   },
-  scene: [CrawlScene, ModeScene, SelectScene, DifficultyScene, BracketScene, BattleScene, PauseScene],
+  scene: [CrawlScene, ModeScene, SelectScene, DifficultyScene, BracketScene, BattleScene, PauseScene, SettingsScene],
 })
 
 // Handle for debugging and automated verification scripts.
