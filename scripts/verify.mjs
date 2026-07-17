@@ -18,7 +18,19 @@ import {
   competitorId,
 } from '../src/tournament/bracket.js'
 import { CHARACTERS, overall } from '../src/data/characters.js'
-import { loadTournament, saveTournament, clearTournament } from '../src/tournament/state.js'
+import { loadTournament, saveTournament, clearTournament, normalizeTournament } from '../src/tournament/state.js'
+import {
+  createGroupTournament,
+  createLeagueTournament,
+  matchdayCount,
+  inRoundRobin,
+  playerPool,
+  playerRRMatch,
+  playerRROpponentId,
+  poolStandings,
+  recordRRResult,
+  resolvePoolClashes,
+} from '../src/tournament/roundrobin.js'
 
 const URL = 'http://localhost:4173/star-wars-battle-wars/'
 const SHOTS = 'verify-artifacts'
@@ -156,6 +168,204 @@ const seededRng = (seed) => {
     'player win simulates the rest of the round',
     r0After > r0Before && r0After >= 7,
     `before=${r0Before}, after=${r0After}`,
+  )
+}
+
+// ============================================================================
+// UNIT TESTS: ROUND-ROBIN FORMATS — Phase 7 (pure Node, no browser)
+// ============================================================================
+
+console.log('\nRound-robin format unit tests:')
+
+// Every pair in a fixture list meets exactly once (single round-robin).
+const pairsMeetOnce = (pool) => {
+  const seen = new Set()
+  for (const day of pool.fixtures) {
+    for (const fx of day) {
+      seen.add([fx.a, fx.b].sort().join('|'))
+    }
+  }
+  const n = pool.members.length
+  return seen.size === (n * (n - 1)) / 2 && pool.fixtures.flat().length === seen.size
+}
+
+// Test 7: Group tournament creation.
+{
+  const rng = seededRng(1042)
+  const state = createGroupTournament('luke', 'knight', rng)
+  const allMembers = state.rr.pools.flatMap((p) => p.members)
+  check(
+    'group: 7 pools of 4 covering all 28 exactly once',
+    state.rr.pools.length === 7 &&
+      state.rr.pools.every((p) => p.members.length === 4) &&
+      new Set(allMembers).size === 28,
+  )
+  check(
+    'group: player pool located, 3 matchdays of 2 matches',
+    playerPool(state).members.includes('luke') &&
+      matchdayCount(state) === 3 &&
+      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === 2)),
+  )
+  check('group: every pool pair meets exactly once', state.rr.pools.every(pairsMeetOnce))
+  check(
+    'group: player has a valid matchday-0 opponent from own pool',
+    inRoundRobin(state) &&
+      playerRROpponentId(state) !== null &&
+      playerPool(state).members.includes(playerRROpponentId(state)),
+  )
+}
+
+// Test 8: League tournament creation.
+{
+  const rng = seededRng(2042)
+  const state = createLeagueTournament('vader', 'master', rng)
+  check(
+    'league: 2 divisions of 14, 13 matchdays of 7 matches',
+    state.rr.pools.length === 2 &&
+      state.rr.pools.every((p) => p.members.length === 14) &&
+      matchdayCount(state) === 13 &&
+      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === 7)),
+  )
+  check('league: every division pair meets exactly once', state.rr.pools.every(pairsMeetOnce))
+}
+
+// Test 9: A mid-stage loss never eliminates — the table decides at the end.
+{
+  const rng = seededRng(3042)
+  const state = createGroupTournament('grogu', 'padawan', rng)
+  recordRRResult(state, false, rng)
+  check(
+    'group: losing matchday 0 leaves the player active on matchday 1',
+    state.status === 'active' && inRoundRobin(state) && state.rr.matchday === 1 && playerRRMatch(state) !== null,
+  )
+}
+
+// Test 10: Group sweep (3-0) → guaranteed group winner → knockout stage.
+{
+  const rng = seededRng(4042)
+  const state = createGroupTournament('luke', 'knight', rng)
+  for (let d = 0; d < 3; d++) recordRRResult(state, true, rng)
+
+  const table = poolStandings(state, state.rr.playerPool)
+  check(
+    'group sweep: player tops the group table at 3-0 (9 pts)',
+    table[0].id === 'luke' && table[0].wins === 3 && table[0].pts === 9,
+    JSON.stringify(table.map((r) => `${r.id}:${r.wins}`)),
+  )
+  check(
+    'group sweep: all pool matches resolved (6 per group)',
+    state.rr.pools.every((p) => p.fixtures.flat().every((fx) => fx.played)),
+  )
+  check(
+    'group sweep: knockout stage seeded with 16 distinct qualifiers incl. player',
+    state.stage === 'knockout' &&
+      state.status === 'active' &&
+      state.seeds.length === 16 &&
+      new Set(state.seeds).size === 16 &&
+      state.playerSlot === state.seeds.indexOf('luke') &&
+      state.rounds.length === 4,
+  )
+  // No first-round rematch between two qualifiers from the same group.
+  const poolOf = {}
+  state.rr.pools.forEach((p, i) => p.members.forEach((id) => (poolOf[id] = i)))
+  const clashes = [0, 1, 2, 3, 4, 5, 6, 7].filter(
+    (m) => poolOf[state.seeds[2 * m]] === poolOf[state.seeds[2 * m + 1]],
+  )
+  check('group sweep: no same-group R16 rematches', clashes.length === 0, `clashes=${clashes.join(',')}`)
+  check(
+    'group sweep: knockout playable via existing bracket.js (playerMatch works)',
+    playerMatch(state) !== null && playerOpponentId(state) !== null,
+  )
+}
+
+// Test 11: Group wipeout (0-3) → never qualifies → eliminated + full sim.
+{
+  const rng = seededRng(5042)
+  const state = createGroupTournament('padme', 'initiate', rng)
+  for (let d = 0; d < 3; d++) recordRRResult(state, false, rng)
+  check(
+    'group 0-3: eliminated at the pool stage, not seeded into the knockout',
+    state.status === 'eliminated' && state.rrEliminated === true && !state.seeds.includes('padme'),
+  )
+  check(
+    'group 0-3: knockout fully simulated to a champion',
+    state.championSeed !== null &&
+      state.rounds.every((r) => r.every((m) => m.played)) &&
+      isOver(state) &&
+      !isChampion(state),
+  )
+}
+
+// Test 12: League sweep (13-0) → division winner → knockout; wipeout → out.
+{
+  const rng = seededRng(6042)
+  const state = createLeagueTournament('yoda', 'master', rng)
+  for (let d = 0; d < 13; d++) recordRRResult(state, true, rng)
+  const table = poolStandings(state, state.rr.playerPool)
+  check(
+    'league sweep: player tops the division at 13-0 and reaches the knockout',
+    table[0].id === 'yoda' && table[0].wins === 13 && state.stage === 'knockout' && state.status === 'active',
+  )
+  check(
+    'league sweep: division winners land in opposite bracket halves',
+    (() => {
+      const other = poolStandings(state, 1 - state.rr.playerPool)[0].id
+      const half = (id) => (state.seeds.indexOf(id) < 8 ? 0 : 1)
+      return half('yoda') !== half(other)
+    })(),
+  )
+
+  const rng2 = seededRng(7042)
+  const lost = createLeagueTournament('padme', 'initiate', rng2)
+  for (let d = 0; d < 13; d++) recordRRResult(lost, false, rng2)
+  check(
+    'league 0-13: finishes last, eliminated without a knockout berth',
+    lost.status === 'eliminated' && lost.rrEliminated === true && !lost.seeds.includes(lost.playerId),
+  )
+}
+
+// Test 13: Same-pool clash resolution (direct, synthetic).
+{
+  // Match 0 pairs two members of pool 9; a swap with another match fixes it.
+  const slots = ['a1', 'a2', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h1', 'h2']
+  const poolOf = { a1: 9, a2: 9, b1: 1, b2: 1, c1: 2, c2: 2, d1: 3, d2: 3, e1: 4, e2: 4, f1: 5, f2: 5, g1: 6, g2: 6, h1: 7, h2: 7 }
+  const fixed = resolvePoolClashes([...slots], poolOf)
+  const clashCount = [0, 1, 2, 3, 4, 5, 6, 7].filter((m) => poolOf[fixed[2 * m]] === poolOf[fixed[2 * m + 1]]).length
+  check(
+    'resolvePoolClashes: synthetic same-pool R16 pairing gets swapped clean',
+    clashCount === 0 && new Set(fixed).size === 16,
+    `clashes=${clashCount}`,
+  )
+}
+
+// Test 14: Save-state migration (pure normalizeTournament, no browser).
+{
+  const rng = seededRng(8042)
+  const v1 = createTournament('luke', 'knight', rng) // bracket.js still emits v1
+  const migrated = normalizeTournament(JSON.parse(JSON.stringify(v1)))
+  check(
+    'normalize: v1 knockout save migrates to v2 knockout intact',
+    migrated !== null &&
+      migrated.version === 2 &&
+      migrated.format === 'knockout' &&
+      migrated.stage === 'knockout' &&
+      migrated.playerId === 'luke' &&
+      migrated.seeds.length === 16,
+  )
+
+  const rr = createGroupTournament('vader', 'knight', rng)
+  const roundTrip = normalizeTournament(JSON.parse(JSON.stringify(rr)))
+  check(
+    'normalize: fresh v2 round-robin state round-trips',
+    roundTrip !== null && roundTrip.stage === 'roundrobin' && roundTrip.rr.pools.length === 7,
+  )
+
+  check(
+    'normalize: garbage and unknown versions are rejected',
+    normalizeTournament(null) === null &&
+      normalizeTournament({ version: 3 }) === null &&
+      normalizeTournament({ version: 1 }) === null &&
+      normalizeTournament({ version: 2, playerId: 'luke', stage: 'knockout', seeds: [] }) === null,
   )
 }
 

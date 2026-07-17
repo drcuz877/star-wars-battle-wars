@@ -37,9 +37,10 @@ function shuffle(arr, rng = Math.random) {
   return arr
 }
 
-// Build an empty bracket structure: rounds[r] = array of (4/2/1) matches.
+// Build an empty bracket structure: rounds[r] = array of (8/4/2/1) matches.
 // Each match is { aSeed, bSeed, winnerSeed: null, played: false }.
-function createRounds() {
+// Exported for roundrobin.js, which seeds a knockout from pool results.
+export function createRounds() {
   return [
     Array(8)
       .fill(null)
@@ -187,6 +188,12 @@ function simulateRemainder(state, rng = Math.random) {
   state.updatedAt = Date.now()
 
   return state
+}
+
+// Public wrapper for roundrobin.js: when the player fails to qualify from a
+// pool stage, the whole knockout still gets simulated to crown a champion.
+export function simulateKnockoutRemainder(state, rng = Math.random) {
+  return simulateRemainder(state, rng)
 }
 
 // ============================================================================
