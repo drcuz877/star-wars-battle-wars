@@ -10,8 +10,11 @@ import { SFX_CLIPS, MUSIC_TRACKS } from './manifest.js'
 //    permanent home for blaster shots, UI blips, jump/dodge whooshes.
 //  - Curated clips + music: real files loaded through Phaser's own loader
 //    (see manifest.js). Until Drew supplies a file for a given id, playSfx
-//    silently falls back to a placeholder synth so nothing is ever silent;
-//    playMusic silently no-ops (no procedural substitute for a full track).
+//    silently falls back to a placeholder synth so nothing is ever silent.
+//    playMusic falls back to a generative ambient bed where one exists
+//    (AMBIENT, below — currently just the crawl's space drone) or, failing
+//    that, stays silent — there's no procedural substitute for a real
+//    melodic track.
 //
 // initAudio()/preloadAudio() run once, from CrawlScene (the game's first
 // scene) — every other scene just calls playSfx()/playMusic() directly.
@@ -20,6 +23,7 @@ let ctx = null
 let phaserSound = null
 let sfxGain = null
 let musicSound = null
+let ambientHandle = null
 let currentMusicId = null
 const loadedKeys = new Set()
 
@@ -97,12 +101,18 @@ export function playSfx(id) {
 
 export function playMusic(id) {
   const key = trackKey(id)
-  if (currentMusicId === id && musicSound?.isPlaying) return
+  if (currentMusicId === id && (musicSound?.isPlaying || ambientHandle)) return
   stopMusic()
-  if (!loadedKeys.has(key) || !phaserSound) return // no track supplied yet — stay silent
-  musicSound = phaserSound.add(key, { loop: true })
-  musicSound.play()
-  currentMusicId = id
+  if (loadedKeys.has(key) && phaserSound) {
+    musicSound = phaserSound.add(key, { loop: true })
+    musicSound.play()
+    currentMusicId = id
+    return
+  }
+  if (!muted && ctx && AMBIENT[id]) {
+    ambientHandle = AMBIENT[id]()
+    currentMusicId = id
+  }
 }
 
 export function stopMusic() {
@@ -111,6 +121,10 @@ export function stopMusic() {
     musicSound.destroy()
   }
   musicSound = null
+  if (ambientHandle) {
+    ambientHandle.stop()
+    ambientHandle = null
+  }
   currentMusicId = null
 }
 
@@ -195,4 +209,79 @@ const SYNTH = {
       setTimeout(() => ctx && playTone({ freqStart: f, duration: 0.28, type: 'triangle', gainPeak: 0.18 }), i * 140)
     })
   },
+}
+
+// ---- Generative ambient beds ---------------------------------------------
+// Unlike the one-shot SYNTH sounds above, an ambient bed is long-running:
+// start() returns a handle whose stop() winds everything down cleanly.
+// Placeholder for the crawl's Flow Music track (audio-brief.md) — a slow
+// detuned drone stack plus sparse high "starlight" twinkles.
+
+function ambientSpace() {
+  const t0 = now()
+  const drones = [55, 82.4, 110].map((freq) => {
+    const osc = ctx.createOscillator()
+    osc.type = 'sine'
+    osc.frequency.value = freq
+    const g = ctx.createGain()
+    g.gain.setValueAtTime(0, t0)
+    g.gain.linearRampToValueAtTime(0.045, t0 + 2.5)
+    osc.connect(g)
+    g.connect(sfxGain)
+    osc.start(t0)
+    return { osc, g }
+  })
+
+  // Slow LFO-driven shimmer layer — the "moving through space" motion.
+  const shimmer = ctx.createOscillator()
+  shimmer.type = 'sine'
+  shimmer.frequency.value = 220
+  const shimmerGain = ctx.createGain()
+  shimmerGain.gain.value = 0.018
+  const lfo = ctx.createOscillator()
+  lfo.frequency.value = 0.07
+  const lfoDepth = ctx.createGain()
+  lfoDepth.gain.value = 0.012
+  lfo.connect(lfoDepth)
+  lfoDepth.connect(shimmerGain.gain)
+  shimmer.connect(shimmerGain)
+  shimmerGain.connect(sfxGain)
+  shimmer.start(t0)
+  lfo.start(t0)
+
+  // Sparse random high twinkles, like distant starlight.
+  let twinkleTimer = null
+  const scheduleTwinkle = () => {
+    const delay = 900 + Math.random() * 2400
+    twinkleTimer = setTimeout(() => {
+      if (!ctx) return
+      playTone({
+        freqStart: 1300 + Math.random() * 1400,
+        duration: 0.6,
+        type: 'sine',
+        gainPeak: 0.03,
+        attack: 0.18,
+      })
+      scheduleTwinkle()
+    }, delay)
+  }
+  scheduleTwinkle()
+
+  return {
+    stop() {
+      clearTimeout(twinkleTimer)
+      const t = now()
+      for (const { osc, g } of drones) {
+        g.gain.linearRampToValueAtTime(0, t + 0.6)
+        osc.stop(t + 0.7)
+      }
+      shimmerGain.gain.linearRampToValueAtTime(0, t + 0.6)
+      shimmer.stop(t + 0.7)
+      lfo.stop(t + 0.7)
+    },
+  }
+}
+
+const AMBIENT = {
+  crawl: ambientSpace,
 }

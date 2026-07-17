@@ -283,12 +283,16 @@ export class BattleScene extends Phaser.Scene {
         return
       }
 
-      this.makeEndOption(cx, cy + 52, 'REMATCH', () =>
+      this.makeEndOption(cx, cy + 50, 'REMATCH', () =>
         this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id, difficulty: this.difficultyId }),
       )
-      this.makeEndOption(cx, cy + 96, 'CHANGE CHARACTER', () => this.scene.start('Select'))
+      this.makeEndOption(cx, cy + 90, 'CHANGE CHARACTER', () => this.scene.start('Select'))
+      // A single-match win/loss had no way back to the main menu (and so no
+      // way to switch into Tournament mode) — tournament matches already
+      // route through Bracket -> Mode; this closes the same gap for singles.
+      this.makeEndOption(cx, cy + 130, 'MAIN MENU', () => this.scene.start('Mode'))
       this.add
-        .text(cx, cy + 134, 'ENTER rematch · C change character', {
+        .text(cx, cy + 166, 'ENTER rematch · C change character · M main menu', {
           fontFamily: 'Arial, sans-serif',
           fontSize: '13px',
           color: '#8a8ab0',
@@ -299,6 +303,7 @@ export class BattleScene extends Phaser.Scene {
         this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id, difficulty: this.difficultyId }),
       )
       this.input.keyboard.once('keydown-C', () => this.scene.start('Select'))
+      this.input.keyboard.once('keydown-M', () => this.scene.start('Mode'))
     })
   }
 
