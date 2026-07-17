@@ -12,6 +12,7 @@ import { BattleScene } from './scenes/BattleScene.js'
 import { PauseScene } from './scenes/PauseScene.js'
 import { SettingsScene } from './scenes/SettingsScene.js'
 import { HolocronScene } from './scenes/HolocronScene.js'
+import { CodexScene } from './scenes/CodexScene.js'
 
 // Clamp any stat typos in characters.js before anything reads them.
 validateCharacters()
@@ -53,6 +54,7 @@ const game = new Phaser.Game({
     PauseScene,
     SettingsScene,
     HolocronScene,
+    CodexScene,
   ],
 })
 

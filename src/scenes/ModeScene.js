@@ -69,6 +69,7 @@ export class ModeScene extends Phaser.Scene {
 
     this.holocronTriggered = false
     this.setupHolocron(title)
+    this.makeCodexLink()
 
     const savedTournament = loadTournament()
 
@@ -205,5 +206,25 @@ export class ModeScene extends Phaser.Scene {
     text.on('pointerover', () => text.setColor(GOLD))
     text.on('pointerout', () => text.setColor('#7a6a2a'))
     text.on('pointerdown', () => this.scene.start('Holocron'))
+  }
+
+  // Always-visible public counterpart to the Holocron (Drew's idea,
+  // 2026-07-17): browse the roster's stats/specials, no secret combo, no
+  // editing. Top-right so it never collides with the mode-button stack
+  // below, which grows a third row when a tournament is in progress.
+  makeCodexLink() {
+    const W = T.arena.width
+    const text = this.add
+      .text(W - 16, 20, '📖 CHARACTER CODEX', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#8a8ab0',
+      })
+      .setOrigin(1, 0.5)
+      .setInteractive({ useHandCursor: true })
+    text.on('pointerover', () => text.setColor(GOLD))
+    text.on('pointerout', () => text.setColor('#8a8ab0'))
+    text.on('pointerdown', () => this.scene.start('Codex'))
   }
 }
