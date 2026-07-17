@@ -32,6 +32,10 @@ export class BattleScene extends Phaser.Scene {
     // sticks for rematches until a new one is chosen.
     if (data?.arena) this.arenaId = data.arena
     this.arenaId = this.arenaId ?? 'random'
+    // 'single' = normal Rematch/Change Character end menu. 'tournament' =
+    // a single Continue that reports win/loss back to BracketScene, which
+    // owns all advance/champion/eliminate logic.
+    this.mode = data?.mode ?? this.mode ?? 'single'
   }
 
   create() {
@@ -246,6 +250,24 @@ export class BattleScene extends Phaser.Scene {
       .setDepth(60)
 
     this.time.delayedCall(900, () => {
+      if (this.mode === 'tournament') {
+        // No branching menu here — Bracket owns advance/champion/eliminate.
+        // A draw (winner === null) counts as not-a-win, same as a loss.
+        const playerWon = winner === this.player
+        const goToBracket = () => this.scene.start('Bracket', { result: playerWon ? 'win' : 'loss' })
+        this.makeEndOption(cx, cy + 60, playerWon ? 'CONTINUE' : 'SEE RESULTS', goToBracket)
+        this.add
+          .text(cx, cy + 100, 'ENTER to continue', {
+            fontFamily: 'Arial, sans-serif',
+            fontSize: '13px',
+            color: '#8a8ab0',
+          })
+          .setOrigin(0.5)
+          .setDepth(60)
+        this.input.keyboard.once('keydown-ENTER', goToBracket)
+        return
+      }
+
       this.makeEndOption(cx, cy + 52, 'REMATCH', () =>
         this.scene.restart({ p1: this.p1Char.id, p2: this.p2Char.id, difficulty: this.difficultyId }),
       )

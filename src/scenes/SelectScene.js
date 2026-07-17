@@ -15,6 +15,10 @@ export class SelectScene extends Phaser.Scene {
     super('Select')
   }
 
+  init(data) {
+    this.mode = data?.mode ?? 'single'
+  }
+
   create() {
     applyCrispCamera(this)
     const W = T.arena.width
@@ -180,12 +184,19 @@ export class SelectScene extends Phaser.Scene {
   pick(c, card) {
     if (this.picking === 'p1') {
       this.p1 = c
+      // Tournament mode only needs the player's own fighter — the other
+      // 15 are drawn randomly by createTournament(). Skip straight to
+      // Difficulty instead of prompting for an opponent.
+      if (this.mode === 'tournament') {
+        this.scene.start('Difficulty', { mode: 'tournament', p1: c.id })
+        return
+      }
       this.picking = 'p2'
       this.title.setText('CHOOSE YOUR OPPONENT')
       this.subtitle.setText(`YOUR FIGHTER: ${c.name.toUpperCase()}`).setColor(GOLD)
       if (card) card.setStrokeStyle(3, 0xffe81f, 1)
     } else {
-      this.scene.start('Difficulty', { p1: this.p1.id, p2: c.id })
+      this.scene.start('Difficulty', { mode: 'single', p1: this.p1.id, p2: c.id })
     }
   }
 }

@@ -80,7 +80,11 @@ export class PauseScene extends Phaser.Scene {
 
   quitGame() {
     this.scene.stop()
+    // A tournament match quit doesn't record a result — the saved bracket
+    // is untouched, so landing back on Bracket just re-shows the same
+    // pending match (Resume takes the identical path).
+    const mode = this.scene.get('Battle').mode
     this.scene.stop('Battle')
-    this.scene.start('Select')
+    this.scene.start(mode === 'tournament' ? 'Bracket' : 'Select')
   }
 }

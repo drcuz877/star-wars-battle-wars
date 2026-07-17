@@ -117,6 +117,6 @@ export class CrawlScene extends Phaser.Scene {
     if (this.leaving) return
     this.leaving = true
     this.cameras.main.fadeOut(350, 0, 0, 0)
-    this.time.delayedCall(360, () => this.scene.start('Select'))
+    this.time.delayedCall(360, () => this.scene.start('Mode'))
   }
 }

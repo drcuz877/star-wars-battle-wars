@@ -5,6 +5,20 @@
 import { chromium } from 'playwright'
 import { spawn, spawnSync } from 'node:child_process'
 import { mkdirSync } from 'node:fs'
+import {
+  createTournament,
+  playerMatch,
+  playerOpponentId,
+  recordPlayerResult,
+  simulateMatch,
+  winProbability,
+  isChampion,
+  isOver,
+  roundName,
+  competitorId,
+} from '../src/tournament/bracket.js'
+import { CHARACTERS, overall } from '../src/data/characters.js'
+import { loadTournament, saveTournament, clearTournament } from '../src/tournament/state.js'
 
 const URL = 'http://localhost:4173/star-wars-battle-wars/'
 const SHOTS = 'verify-artifacts'
@@ -15,6 +29,137 @@ const check = (name, ok, detail = '') => {
   results.push(ok)
   console.log(`${ok ? '  PASS' : '! FAIL'}  ${name}${detail ? `  (${detail})` : ''}`)
 }
+
+// ============================================================================
+// UNIT TESTS: TOURNAMENT BRACKET (pure Node, no browser)
+// ============================================================================
+
+console.log('\nTournament bracket unit tests:')
+
+// Seeded RNG for deterministic tests.
+const seededRng = (seed) => {
+  let x = Math.sin(seed++) * 10000
+  return () => {
+    x = Math.sin(seed++) * 10000
+    return x - Math.floor(x)
+  }
+}
+
+// Test 1: Tournament creation.
+{
+  const rng = seededRng(42)
+  const state = createTournament('luke', 'knight', rng)
+  check(
+    'createTournament: 16 distinct seeds, player included',
+    state.seeds.length === 16 && new Set(state.seeds).size === 16 && state.seeds.includes('luke'),
+    `${state.seeds.join(',')}`,
+  )
+  check(
+    'createTournament: playerSlot correct',
+    state.playerSlot === state.seeds.indexOf('luke'),
+    `playerSlot=${state.playerSlot}`,
+  )
+  check(
+    'createTournament: round structure [8,4,2,1]',
+    state.rounds[0].length === 8 &&
+      state.rounds[1].length === 4 &&
+      state.rounds[2].length === 2 &&
+      state.rounds[3].length === 1,
+  )
+  check('createTournament: first round seeded (0,1)(2,3)...', state.rounds[0][0].aSeed === 0 && state.rounds[0][0].bSeed === 1)
+  check('createTournament: initial state active', state.status === 'active' && state.currentRound === 0)
+}
+
+// Test 2: Win probability bounds.
+{
+  const yoda = CHARACTERS.find((c) => c.id === 'yoda')
+  const grogu = CHARACTERS.find((c) => c.id === 'grogu')
+  const p = winProbability(yoda, grogu)
+  check('winProbability: huge favorite stays <0.95', p < 0.95 && p > 0.75, `p=${p.toFixed(2)}`)
+}
+
+// Test 3: Four wins → champion.
+{
+  const rng = seededRng(123)
+  const state = createTournament('luke', 'knight', rng)
+  const playerOp = playerOpponentId(state)
+  check('playerOpponentId: returns a valid character', playerOp && CHARACTERS.find((c) => c.id === playerOp))
+
+  // Play all 4 rounds (player wins each).
+  for (let r = 0; r < 4; r++) {
+    const match = playerMatch(state)
+    check(
+      `round ${r}: playerMatch returns the current match`,
+      match && (match.aSeed === state.playerSlot || match.bSeed === state.playerSlot),
+    )
+    recordPlayerResult(state, true, rng)
+  }
+
+  check('four player wins → champion', isChampion(state), `status=${state.status}`)
+  check('champion status: isOver() true', isOver(state))
+  check('all 4 rounds fully resolved', state.rounds.every((r) => r.every((m) => m.played)))
+}
+
+// Test 4: Loss → elimination + full sim.
+{
+  const rng = seededRng(456)
+  const state = createTournament('padme', 'padawan', rng)
+
+  // Win round 1.
+  recordPlayerResult(state, true, rng)
+  check('after r0 win: advanced to round 1', state.currentRound === 1 && state.status === 'active')
+
+  // Lose round 1.
+  recordPlayerResult(state, false, rng)
+  check(
+    'after loss: eliminated + simulated',
+    state.status === 'eliminated' &&
+      state.eliminatedRound === 1 &&
+      state.championSeed !== null &&
+      state.championSeed !== state.playerSlot,
+    `eliminatedRound=${state.eliminatedRound}, championSeed=${state.championSeed}`,
+  )
+  check('all rounds fully played after elimination', state.rounds.every((r) => r.every((m) => m.played)))
+  check('isOver() true after elimination', isOver(state))
+  check('isChampion() false (AI won)', !isChampion(state))
+}
+
+// Test 5: Storage helpers (localStorage only available in browsers).
+{
+  const rng = seededRng(789)
+  const orig = createTournament('vader', 'master', rng)
+  recordPlayerResult(orig, true, rng)
+  recordPlayerResult(orig, true, rng)
+
+  // localStorage isn't available in Node, so saves silently fail (graceful
+  // degradation). Just check the API exists and handles null gracefully.
+  clearTournament()
+  check('clearTournament() API exists', true)
+  saveTournament(orig)
+  check('saveTournament() API exists', true)
+
+  const loaded = loadTournament()
+  check(
+    'loadTournament() returns null if no storage (Node environment)',
+    loaded === null,
+  )
+}
+
+// Test 6: Rest-of-round simulation after player win.
+{
+  const rng = seededRng(999)
+  const state = createTournament('yoda', 'knight', rng)
+  const r0Before = state.rounds[0].filter((m) => m.played).length
+  recordPlayerResult(state, true, rng)
+  const r0After = state.rounds[0].filter((m) => m.played).length
+  check(
+    'player win simulates the rest of the round',
+    r0After > r0Before && r0After >= 7,
+    `before=${r0Before}, after=${r0After}`,
+  )
+}
+
+console.log('') // newline before browser tests
 
 // The opening crawl runs on every load; a click/tap in dead space (no
 // card lives at 10,250) skips it through to character select.
@@ -49,9 +194,18 @@ try {
   const crawlShown = await page.evaluate(() => window.game.scene.isActive('Crawl'))
   await skipCrawl(page)
   check(
-    'opening crawl plays on load and skips to character select',
-    crawlShown && (await page.evaluate(() => window.game.scene.isActive('Select'))),
+    'opening crawl plays on load and skips to the mode menu',
+    crawlShown && (await page.evaluate(() => window.game.scene.isActive('Mode'))),
   )
+  await page.screenshot({ path: `${SHOTS}/00-mode-menu.png` })
+
+  const clickModeButton = async (id) => {
+    const pos = await page.evaluate((bid) => window.game.scene.keys.Mode.buttons.find((b) => b.id === bid), id)
+    await page.mouse.click(pos.x, pos.y)
+    await page.waitForTimeout(200)
+  }
+  await clickModeButton('single')
+  check('SINGLE BATTLE reaches character select', await page.evaluate(() => window.game.scene.isActive('Select')))
   await page.screenshot({ path: `${SHOTS}/01-select-screen.png` })
 
   // --- Character select: pick Luke, then Vader, via real clicks on cards.
@@ -317,6 +471,103 @@ try {
     await page.evaluate(() => window.game.scene.isActive('Select')),
   )
 
+  // ---------- Tournament flow: create, play, force a loss, reach results ----------
+  // The single-battle flow above ended back on Select (mode:'single') via
+  // "Change Character" — return to the mode menu for real before driving
+  // the Tournament button (a stale scene's cached button coordinates would
+  // otherwise land on whatever's under that pixel on the WRONG scene).
+  await page.evaluate(() => window.game.scene.start('Mode'))
+  await page.waitForTimeout(300)
+  await clickModeButton('tournament')
+  check('TOURNAMENT reaches character select', await page.evaluate(() => window.game.scene.keys.Select.mode === 'tournament'))
+
+  await clickCard('yoda') // one pick only — tournament mode skips the opponent step
+  await page.waitForTimeout(500)
+  check(
+    'tournament mode skips straight to Difficulty after one pick',
+    await page.evaluate(() => window.game.scene.isActive('Difficulty')),
+  )
+
+  await clickDifficulty('initiate')
+  await page.waitForTimeout(500)
+  check(
+    'picking a rank creates the tournament and reaches Bracket',
+    await page.evaluate(() => window.game.scene.isActive('Bracket')),
+  )
+
+  const bracketState = await page.evaluate(() => {
+    const s = window.game.scene.keys.Bracket.state
+    if (!s) return null
+    return { playerId: s.playerId, seedCount: s.seeds.length, distinct: new Set(s.seeds).size, status: s.status }
+  })
+  check(
+    'bracket has 16 distinct seeds including the player',
+    bracketState &&
+      bracketState.playerId === 'yoda' &&
+      bracketState.seedCount === 16 &&
+      bracketState.distinct === 16 &&
+      bracketState.status === 'active',
+    JSON.stringify(bracketState),
+  )
+  await page.screenshot({ path: `${SHOTS}/07-bracket.png` })
+
+  const playPos = await page.evaluate(() => window.game.scene.keys.Bracket.playButtonPos)
+  await page.mouse.click(playPos.x, playPos.y)
+  await page.waitForTimeout(700)
+  const tMatch = await page.evaluate(() => {
+    const s = window.game.scene.keys.Battle
+    return { mode: s.mode, p1: s.p1Char.id, p2: s.p2Char.id }
+  })
+  check(
+    'PLAY NEXT MATCH launches a tournament battle with a valid opponent',
+    tMatch.mode === 'tournament' && tMatch.p1 === 'yoda' && tMatch.p2 !== 'yoda',
+    JSON.stringify(tMatch),
+  )
+
+  // Force a fast loss (drive shortcut, not gameplay — mirrors koGrind's
+  // approach of reaching KO through the real applyHit path) to reach the
+  // elimination/results flow without playing a full round.
+  await page.evaluate(() => {
+    const s = window.game.scene.keys.Battle
+    s.player.hp = 1
+    s.player.blocking = false
+    s.player.invulnerable = false
+    s.player.dodging = false
+    s.player.counterActive = false
+    s.player.applyHit({ attacker: s.enemy, damage: 999, knockback: 0, hitstunMs: 50, melee: true })
+  })
+  await page.waitForTimeout(1600)
+  check('forced hit KOs the player', await page.evaluate(() => window.game.scene.keys.Battle.player.ko))
+
+  await page.keyboard.press('Enter')
+  await page.waitForTimeout(700)
+  const resultState = await page.evaluate(() => {
+    const s = window.game.scene.keys.Bracket
+    return {
+      active: window.game.scene.isActive('Bracket'),
+      status: s.state.status,
+      eliminatedRound: s.state.eliminatedRound,
+      allPlayed: s.state.rounds.every((r) => r.every((m) => m.played)),
+    }
+  })
+  check(
+    'a tournament loss eliminates the player and simulates the rest of the bracket',
+    resultState.active && resultState.status === 'eliminated' && resultState.eliminatedRound === 0 && resultState.allPlayed,
+    JSON.stringify(resultState),
+  )
+  await page.screenshot({ path: `${SHOTS}/08-tournament-results.png` })
+
+  const backBtn = await page.evaluate(() =>
+    window.game.scene.keys.Bracket.resultButtons.find((b) => b.id === 'menu'),
+  )
+  await page.mouse.click(backBtn.x, backBtn.y)
+  await page.waitForTimeout(400)
+  check('BACK TO MENU returns to the mode menu', await page.evaluate(() => window.game.scene.isActive('Mode')))
+  check(
+    'the finished tournament is cleared (no Resume button offered)',
+    await page.evaluate(() => !window.game.scene.keys.Mode.buttons.some((b) => b.id === 'resume')),
+  )
+
   check('no console/page errors', errors.length === 0, errors.slice(0, 3).join(' | '))
   await page.close()
 
@@ -332,6 +583,13 @@ try {
   await tp.waitForSelector('canvas', { timeout: 10000 })
   await tp.waitForTimeout(900)
   await skipCrawl(tp, true)
+
+  const tapModeButton = async (id) => {
+    const pos = await tp.evaluate((bid) => window.game.scene.keys.Mode.buttons.find((b) => b.id === bid), id)
+    await tp.touchscreen.tap(pos.x, pos.y)
+    await tp.waitForTimeout(200)
+  }
+  await tapModeButton('single')
 
   const tapCard = async (id) => {
     const pos = await tp.evaluate(
@@ -425,14 +683,17 @@ try {
   const hscale = await hp.evaluate(() => window.game.scale.width / 960)
   check('high-DPI: canvas backing store is upscaled', hscale > 1, `scale ${hscale}`)
 
-  const hclick = async (scene, id) => {
+  const hClickButton = async (scene, listProp, id) => {
     const pos = await hp.evaluate(
-      ([s, cid]) => window.game.scene.keys[s].cards.find((c) => c.id === cid),
-      [scene, id],
+      ([s, prop, bid]) => window.game.scene.keys[s][prop].find((b) => b.id === bid),
+      [scene, listProp, id],
     )
     await hp.mouse.click(pos.x, pos.y)
     await hp.waitForTimeout(250)
   }
+  const hclick = async (scene, id) => hClickButton(scene, 'cards', id)
+
+  await hClickButton('Mode', 'buttons', 'single')
   await hclick('Select', 'luke')
   check(
     'high-DPI: clicking a card still targets correctly',

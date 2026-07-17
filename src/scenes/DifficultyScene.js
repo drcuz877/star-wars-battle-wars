@@ -6,6 +6,8 @@ import { ARENAS } from './arenas/index.js'
 import { loadJSON, saveJSON } from '../util/storage.js'
 import { portraitKey } from '../art/puppet.js'
 import { RENDER_SCALE, applyCrispCamera } from '../util/display.js'
+import { createTournament } from '../tournament/bracket.js'
+import { saveTournament } from '../tournament/state.js'
 
 const GOLD = '#ffe81f'
 
@@ -18,6 +20,7 @@ export class DifficultyScene extends Phaser.Scene {
   }
 
   init(data) {
+    this.mode = data?.mode ?? 'single'
     this.p1Id = data.p1
     this.p2Id = data.p2
   }
@@ -100,7 +103,9 @@ export class DifficultyScene extends Phaser.Scene {
       this.cards.push({ id: tier.id, x, y })
     })
 
-    this.makeArenaRow()
+    // Tournaments randomize the arena per match, so there's nothing to
+    // pick here — only single battles get the battleground row.
+    if (this.mode !== 'tournament') this.makeArenaRow()
 
     this.add.text(16, H - 20, `build ${__BUILD_TIME__}`, {
       fontFamily: 'Arial, sans-serif',
@@ -247,7 +252,14 @@ export class DifficultyScene extends Phaser.Scene {
 
   pick(tier) {
     saveJSON('lastDifficulty', tier.id)
+    if (this.mode === 'tournament') {
+      const state = createTournament(this.p1Id, tier.id)
+      saveTournament(state)
+      this.scene.start('Bracket')
+      return
+    }
     this.scene.start('Battle', {
+      mode: 'single',
       p1: this.p1Id,
       p2: this.p2Id,
       difficulty: tier.id,
