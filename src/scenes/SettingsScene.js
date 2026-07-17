@@ -3,20 +3,10 @@ import { TUNING as T } from '../combat/tuning.js'
 import { applyCrispCamera } from '../util/display.js'
 import { isMuted, getVolume, setMuted, setVolume, playSfx } from '../audio/audio.js'
 import { getKeymap, setBinding, resetKeymap, ACTION_LABELS, RESERVED_KEYS } from '../input/keymap.js'
+import { nameForKeyEvent } from '../input/keycodes.js'
 
 const GOLD = '#ffe81f'
 const ACTIONS = ['left', 'right', 'jump', 'attack', 'defend', 'special']
-
-// Reverse lookup built once from Phaser's own KeyCodes table, so a captured
-// keydown resolves to exactly the string name addKeys() expects.
-const KEYCODE_NAMES = (() => {
-  const map = {}
-  for (const [name, code] of Object.entries(Phaser.Input.Keyboard.KeyCodes)) {
-    if (!(code in map)) map[code] = name
-  }
-  return map
-})()
-const nameForEvent = (event) => KEYCODE_NAMES[event.keyCode] ?? null
 
 // Reachable from the pause menu (spec, Phase 1 checkpoint feedback).
 // Overlays a paused BattleScene the same visual way Pause does — Battle
@@ -97,7 +87,7 @@ export class SettingsScene extends Phaser.Scene {
       const action = this.listeningFor
       this.listeningFor = null
       if (event.key !== 'Escape') {
-        const name = nameForEvent(event)
+        const name = nameForKeyEvent(event)
         if (name && !RESERVED_KEYS.includes(name)) {
           setBinding(action, name)
           this.flash('')

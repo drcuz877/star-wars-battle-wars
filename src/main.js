@@ -1,6 +1,7 @@
 import Phaser from 'phaser'
 import { TUNING as T } from './combat/tuning.js'
 import { validateCharacters } from './data/characters.js'
+import { applyHolocronOverrides } from './holocron/overrides.js'
 import { RENDER_SCALE } from './util/display.js'
 import { CrawlScene } from './scenes/CrawlScene.js'
 import { ModeScene } from './scenes/ModeScene.js'
@@ -10,9 +11,12 @@ import { BracketScene } from './scenes/BracketScene.js'
 import { BattleScene } from './scenes/BattleScene.js'
 import { PauseScene } from './scenes/PauseScene.js'
 import { SettingsScene } from './scenes/SettingsScene.js'
+import { HolocronScene } from './scenes/HolocronScene.js'
 
 // Clamp any stat typos in characters.js before anything reads them.
 validateCharacters()
+// Then layer in any of the son's saved Holocron edits (device-only).
+applyHolocronOverrides()
 
 // Crisp text on big/high-DPI screens. Phaser draws each Text object to an
 // internal texture at resolution 1 by default, which looks blurry once the
@@ -39,7 +43,17 @@ const game = new Phaser.Game({
     width: T.arena.width * RENDER_SCALE,
     height: T.arena.height * RENDER_SCALE,
   },
-  scene: [CrawlScene, ModeScene, SelectScene, DifficultyScene, BracketScene, BattleScene, PauseScene, SettingsScene],
+  scene: [
+    CrawlScene,
+    ModeScene,
+    SelectScene,
+    DifficultyScene,
+    BracketScene,
+    BattleScene,
+    PauseScene,
+    SettingsScene,
+    HolocronScene,
+  ],
 })
 
 // Handle for debugging and automated verification scripts.

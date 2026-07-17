@@ -5,8 +5,18 @@ import { loadTournament } from '../tournament/state.js'
 import { roundName } from '../tournament/bracket.js'
 import { CHARACTERS } from '../data/characters.js'
 import { playMusic, playSfx } from '../audio/audio.js'
+import { isHolocronUnlocked, unlockHolocron } from '../holocron/unlock.js'
+import { nameForKeyEvent } from '../input/keycodes.js'
 
 const GOLD = '#ffe81f'
+
+// The son's secret (spec: "Son's path"). Keyboard is a sliding window —
+// only the trailing 7 keys need to match, so one wrong key doesn't force
+// starting the whole sequence over. Touch taps the title logo instead,
+// since he'll likely play on iPhone.
+const HOLOCRON_SEQUENCE = ['UP', 'UP', 'DOWN', 'DOWN', 'A', 'S', 'D']
+const HOLOCRON_TAP_TARGET = 7
+const HOLOCRON_TAP_WINDOW_MS = 1200
 
 // Landing scene after the crawl. Forks into a single battle, a fresh
 // tournament, or (if one is saved) resuming an in-progress tournament.
@@ -44,7 +54,7 @@ export class ModeScene extends Phaser.Scene {
       }
     }
 
-    this.add
+    const title = this.add
       .text(W / 2, 96, 'STAR WARS\nBATTLE WARS', {
         fontFamily: 'Arial Black, Arial, sans-serif',
         fontSize: '46px',
@@ -56,6 +66,9 @@ export class ModeScene extends Phaser.Scene {
         shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 10, fill: true },
       })
       .setOrigin(0.5)
+
+    this.holocronTriggered = false
+    this.setupHolocron(title)
 
     const savedTournament = loadTournament()
 
@@ -122,5 +135,75 @@ export class ModeScene extends Phaser.Scene {
       text.setColor('#ffffff')
     })
     box.on('pointerdown', onSelect)
+  }
+
+  setupHolocron(title) {
+    if (isHolocronUnlocked()) {
+      this.makeHolocronLink()
+      return
+    }
+
+    this.input.keyboard.removeAllListeners('keydown')
+    let keyBuffer = []
+    this.input.keyboard.on('keydown', (event) => {
+      const name = nameForKeyEvent(event)
+      if (!name) return
+      keyBuffer.push(name)
+      if (keyBuffer.length > HOLOCRON_SEQUENCE.length) keyBuffer.shift()
+      if (
+        keyBuffer.length === HOLOCRON_SEQUENCE.length &&
+        keyBuffer.every((k, i) => k === HOLOCRON_SEQUENCE[i])
+      ) {
+        this.triggerHolocronUnlock()
+      }
+    })
+
+    let tapCount = 0
+    let lastTap = 0
+    title.setInteractive()
+    title.on('pointerdown', () => {
+      const t = this.time.now
+      if (t - lastTap > HOLOCRON_TAP_WINDOW_MS) tapCount = 0
+      lastTap = t
+      tapCount++
+      if (tapCount >= HOLOCRON_TAP_TARGET) this.triggerHolocronUnlock()
+    })
+  }
+
+  triggerHolocronUnlock() {
+    if (this.holocronTriggered) return
+    this.holocronTriggered = true
+    unlockHolocron()
+    playSfx('specialCast')
+    this.cameras.main.flash(220, 255, 225, 130)
+    this.add
+      .text(T.arena.width / 2, T.arena.height / 2, 'JEDI HOLOCRON UNLOCKED', {
+        fontFamily: 'Arial Black, Arial, sans-serif',
+        fontSize: '28px',
+        fontStyle: 'bold',
+        color: GOLD,
+        stroke: '#000000',
+        strokeThickness: 6,
+      })
+      .setOrigin(0.5)
+      .setDepth(80)
+    this.time.delayedCall(1000, () => this.scene.start('Holocron'))
+  }
+
+  makeHolocronLink() {
+    const W = T.arena.width
+    const H = T.arena.height
+    const text = this.add
+      .text(W - 16, H - 20, '◆ HOLOCRON', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '11px',
+        fontStyle: 'bold',
+        color: '#7a6a2a',
+      })
+      .setOrigin(1, 0.5)
+      .setInteractive({ useHandCursor: true })
+    text.on('pointerover', () => text.setColor(GOLD))
+    text.on('pointerout', () => text.setColor('#7a6a2a'))
+    text.on('pointerdown', () => this.scene.start('Holocron'))
   }
 }
