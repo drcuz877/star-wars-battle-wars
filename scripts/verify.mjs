@@ -609,17 +609,30 @@ try {
   await page.keyboard.press('Escape')
   await page.waitForTimeout(200)
   // PauseScene doesn't expose button coordinates (fixed layout, no cards
-  // array) — QUIT GAME sits at (arena width/2, 356) per PauseScene.create().
-  await page.mouse.click(480, 356)
+  // array) — MAIN MENU sits at (arena width/2, 370) per PauseScene.create().
+  // 2026-07-17 playtest: this used to go to Bracket/Select depending on
+  // mode, neither of which was the actual main menu Drew was looking for;
+  // it now always lands on Mode, relying on the tournament's autosave
+  // (already covered elsewhere) to make the round-trip lossless.
+  await page.mouse.click(480, 370)
   await page.waitForTimeout(400)
-  const afterQuit = await page.evaluate(() => ({
+  check(
+    'MAIN MENU from Pause during a tournament match reaches Mode with the tournament preserved',
+    (await page.evaluate(() => window.game.scene.isActive('Mode'))) &&
+      (await page.evaluate(() => window.game.scene.keys.Mode.buttons.some((b) => b.id === 'resume'))),
+  )
+
+  const resumeBtn = await page.evaluate(() => window.game.scene.keys.Mode.buttons.find((b) => b.id === 'resume'))
+  await page.mouse.click(resumeBtn.x, resumeBtn.y)
+  await page.waitForTimeout(400)
+  const afterResume = await page.evaluate(() => ({
     active: window.game.scene.isActive('Bracket'),
     state: window.game.scene.keys.Bracket?.state,
   }))
   check(
-    'quitting a tournament match via Pause returns to Bracket with the tournament untouched',
-    afterQuit.active && afterQuit.state?.status === 'active' && afterQuit.state?.championSeed === null,
-    JSON.stringify({ active: afterQuit.active, status: afterQuit.state?.status }),
+    'Resume Tournament lands back on Bracket with the pending match untouched',
+    afterResume.active && afterResume.state?.status === 'active' && afterResume.state?.championSeed === null,
+    JSON.stringify({ active: afterResume.active, status: afterResume.state?.status }),
   )
 
   // ---- Finish this second tournament too and confirm BACK TO MENU still

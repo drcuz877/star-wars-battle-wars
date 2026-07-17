@@ -214,34 +214,44 @@ const SYNTH = {
 // ---- Generative ambient beds ---------------------------------------------
 // Unlike the one-shot SYNTH sounds above, an ambient bed is long-running:
 // start() returns a handle whose stop() winds everything down cleanly.
-// Placeholder for the crawl's Flow Music track (audio-brief.md) — a slow
-// detuned drone stack plus sparse high "starlight" twinkles.
+// Placeholder for the crawl/menu Flow Music tracks (audio-brief.md).
+//
+// First pass used a low, closely-spaced drone + fully random high pings —
+// Drew's read (2026-07-17): "sounds like a horror movie." That's a fair
+// call — low bass rumble + isolated random high tones with no rhythm is
+// the standard film-score recipe for dread. This version sits a register
+// higher (warmer, less rumbly), adds a slow major-pentatonic arpeggio for
+// gentle forward motion instead of static drone, and snaps the twinkles to
+// the same scale so they read as melodic sparkle rather than random pings.
 
 function ambientSpace() {
   const t0 = now()
-  const drones = [55, 82.4, 110].map((freq) => {
+  const pad = [110, 164.81, 220].map((freq) => {
+    // A3 / E3 / A2 open fifth+octave — same consonant interval as before,
+    // just centered a register higher for warmth instead of rumble.
     const osc = ctx.createOscillator()
-    osc.type = 'sine'
+    osc.type = 'triangle'
     osc.frequency.value = freq
     const g = ctx.createGain()
     g.gain.setValueAtTime(0, t0)
-    g.gain.linearRampToValueAtTime(0.045, t0 + 2.5)
+    g.gain.linearRampToValueAtTime(0.035, t0 + 2.5)
     osc.connect(g)
     g.connect(sfxGain)
     osc.start(t0)
     return { osc, g }
   })
 
-  // Slow LFO-driven shimmer layer — the "moving through space" motion.
+  // Gentle brightness shimmer — subtler wobble than before, sparkle rather
+  // than an uneasy wavering.
   const shimmer = ctx.createOscillator()
   shimmer.type = 'sine'
-  shimmer.frequency.value = 220
+  shimmer.frequency.value = 440
   const shimmerGain = ctx.createGain()
-  shimmerGain.gain.value = 0.018
+  shimmerGain.gain.value = 0.012
   const lfo = ctx.createOscillator()
-  lfo.frequency.value = 0.07
+  lfo.frequency.value = 0.1
   const lfoDepth = ctx.createGain()
-  lfoDepth.gain.value = 0.012
+  lfoDepth.gain.value = 0.008
   lfo.connect(lfoDepth)
   lfoDepth.connect(shimmerGain.gain)
   shimmer.connect(shimmerGain)
@@ -249,19 +259,31 @@ function ambientSpace() {
   shimmer.start(t0)
   lfo.start(t0)
 
-  // Sparse random high twinkles, like distant starlight.
+  // Slow ping-pong arpeggio, A major pentatonic (A3..A4) — a hopeful,
+  // unhurried "journey" motif instead of a static hum.
+  const SCALE = [220, 246.94, 277.18, 329.63, 369.99, 440]
+  let step = 0
+  let dir = 1
+  let arpTimer = null
+  const playNextArpNote = () => {
+    if (!ctx) return
+    playTone({ freqStart: SCALE[step], duration: 1.3, type: 'triangle', gainPeak: 0.05, attack: 0.25 })
+    step += dir
+    if (step >= SCALE.length - 1 || step <= 0) dir *= -1
+    arpTimer = setTimeout(playNextArpNote, 1100)
+  }
+  arpTimer = setTimeout(playNextArpNote, 1400)
+
+  // Sparse high twinkles, snapped to the same scale (one octave up) so
+  // they land as consonant sparkle rather than random dissonant pings.
+  const TWINKLE_NOTES = [659.25, 880, 987.77, 1108.73]
   let twinkleTimer = null
   const scheduleTwinkle = () => {
-    const delay = 900 + Math.random() * 2400
+    const delay = 1200 + Math.random() * 2200
     twinkleTimer = setTimeout(() => {
       if (!ctx) return
-      playTone({
-        freqStart: 1300 + Math.random() * 1400,
-        duration: 0.6,
-        type: 'sine',
-        gainPeak: 0.03,
-        attack: 0.18,
-      })
+      const f = TWINKLE_NOTES[Math.floor(Math.random() * TWINKLE_NOTES.length)]
+      playTone({ freqStart: f, duration: 0.6, type: 'sine', gainPeak: 0.03, attack: 0.18 })
       scheduleTwinkle()
     }, delay)
   }
@@ -270,8 +292,9 @@ function ambientSpace() {
   return {
     stop() {
       clearTimeout(twinkleTimer)
+      clearTimeout(arpTimer)
       const t = now()
-      for (const { osc, g } of drones) {
+      for (const { osc, g } of pad) {
         g.gain.linearRampToValueAtTime(0, t + 0.6)
         osc.stop(t + 0.7)
       }

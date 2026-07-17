@@ -53,6 +53,8 @@ export class SelectScene extends Phaser.Scene {
 
     this.picking = 'p1'
     this.p1 = null
+    this.cardRefs = {}
+    this.makeBackToMenuLink()
 
     this.title = this.add
       .text(W / 2, 36, 'CHOOSE YOUR FIGHTER', {
@@ -148,6 +150,7 @@ export class SelectScene extends Phaser.Scene {
       .setOrigin(0.5)
 
     container.add([card, ...pieces, name, ovr])
+    this.cardRefs[c.id] = { card, container }
 
     card.on('pointerover', () => {
       card.setFillStyle(light ? 0x1b2b4a : 0x331a22)
@@ -164,12 +167,18 @@ export class SelectScene extends Phaser.Scene {
 
   makeRandomButton() {
     const W = T.arena.width
+    // Was 22px off the bottom edge — on phones that sits inside the
+    // swipe-up home-gesture zone, which eats the tap before Phaser ever
+    // sees it (Drew's 2026-07-17 playtest: only worked in portrait, where
+    // the button lands elsewhere). Matches the clearance BattleScene's
+    // touch buttons already use safely (T.arena.height - 64).
+    const y = T.arena.height - 44
     const box = this.add
-      .rectangle(W / 2, T.arena.height - 22, 170, 30, 0xffffff, 0.06)
+      .rectangle(W / 2, y, 170, 30, 0xffffff, 0.06)
       .setStrokeStyle(1, 0xffe81f, 0.6)
       .setInteractive({ useHandCursor: true })
     const label = this.add
-      .text(W / 2, T.arena.height - 22, '🎲  RANDOM', {
+      .text(W / 2, y, '🎲  RANDOM', {
         fontFamily: 'Arial, sans-serif',
         fontSize: '15px',
         fontStyle: 'bold',
@@ -198,8 +207,34 @@ export class SelectScene extends Phaser.Scene {
       this.title.setText('CHOOSE YOUR OPPONENT')
       this.subtitle.setText(`YOUR FIGHTER: ${c.name.toUpperCase()}`).setColor(GOLD)
       if (card) card.setStrokeStyle(3, 0xffe81f, 1)
+      // Can't fight yourself — dim + disable your own card so it can't be
+      // tapped again as the opponent (Drew found tapping Yoda twice for
+      // both slots silently worked, 2026-07-17). Covers the Random button
+      // pick too, not just a direct card tap.
+      this.disableCard(c.id)
     } else {
       this.scene.start('Difficulty', { mode: 'single', p1: this.p1.id, p2: c.id })
     }
+  }
+
+  disableCard(id) {
+    const ref = this.cardRefs[id]
+    if (!ref) return
+    ref.card.disableInteractive()
+    ref.container.setAlpha(0.3)
+  }
+
+  makeBackToMenuLink() {
+    const text = this.add
+      .text(16, 20, '‹ MAIN MENU', {
+        fontFamily: 'Arial, sans-serif',
+        fontSize: '13px',
+        fontStyle: 'bold',
+        color: '#8a8ab0',
+      })
+      .setInteractive({ useHandCursor: true })
+    text.on('pointerover', () => text.setColor(GOLD))
+    text.on('pointerout', () => text.setColor('#8a8ab0'))
+    text.on('pointerdown', () => this.scene.start('Mode'))
   }
 }

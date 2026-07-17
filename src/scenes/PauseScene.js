@@ -34,7 +34,7 @@ export class PauseScene extends Phaser.Scene {
     this.makeOption(cx, 226, 'RESUME', () => this.resumeBattle())
     this.makeOption(cx, 274, 'SETTINGS', () => this.scene.start('Settings'))
     this.makeOption(cx, 322, 'RESTART MATCH', () => this.restartBattle())
-    this.makeOption(cx, 370, 'QUIT GAME', () => this.quitGame())
+    this.makeOption(cx, 370, 'MAIN MENU', () => this.goToMenu())
 
     this.add
       .text(cx, 412, 'ESC or P also resumes', {
@@ -76,20 +76,15 @@ export class PauseScene extends Phaser.Scene {
     this.scene.get('Battle').scene.restart()
   }
 
-  quitGame() {
+  goToMenu() {
     this.scene.stop()
-    // A tournament match quit doesn't record a result — the saved bracket
-    // is untouched, so landing back on Bracket just re-shows the same
-    // pending match (Resume takes the identical path).
-    const mode = this.scene.get('Battle').mode
     this.scene.stop('Battle')
-    if (mode === 'tournament') {
-      // Explicit { result: null } — a bare scene.start('Bracket') can
-      // reapply a stale result from Bracket's last activation. See
-      // BracketScene.init() / DifficultyScene.
-      this.scene.start('Bracket', { result: null })
-    } else {
-      this.scene.start('Select')
-    }
+    // Used to branch to Select (single) or Bracket (tournament) — neither
+    // was the actual main menu, which Drew flagged had no path to it at
+    // all from Pause (2026-07-17). Tournament progress autosaves on every
+    // result regardless of which scene you land on, so going straight to
+    // Mode loses nothing: Resume Tournament picks the pending match back
+    // up exactly where this left off.
+    this.scene.start('Mode')
   }
 }
