@@ -122,9 +122,13 @@ export const PUPPETS = {
     weapon: { hilt: 0x8a6e46 },
   },
 
-  // Kylo Ren — long black hair, black layered robes, crossguard blade.
+  // Kylo Ren — helmeted (2026-07-25, Drew's son: wanted him reading as the
+  // villain, not "human with hair"), black layered robes, crossguard blade.
+  // Reuses the vaderHelmet painter but in Kylo's own dark-graphite/dull-steel
+  // palette (no shiny chrome, no Vader's glassy red lenses) so he doesn't
+  // just look like a Vader recolor.
   kylo: {
-    head: { type: 'human', skin: 0xe4c4a4, hair: 0x201812, long: true },
+    head: { type: 'vaderHelmet', shell: 0x1c1a1f, shine: 0x35323a, mask: 0x0a0a0c, lens: 0x2a1010, grille: 0x4a4a52 },
     torso: { type: 'tunic', cloth: 0x1a181c, flap: 0x26242a, belt: 0x121014, buckle: 0x565c68 },
     arm: { cloth: 0x1a181c, hand: 0xe4c4a4 },
     leg: { cloth: 0x161418, boot: 0x0e0c10 },
