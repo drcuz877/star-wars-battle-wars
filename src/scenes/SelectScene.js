@@ -8,9 +8,7 @@ import { playMusic, playSfx } from '../audio/audio.js'
 const ARCHETYPE_ICON = { saber: '🗡', blaster: '🔫', brawler: '🐻' }
 const GOLD = '#ffe81f'
 
-// Pick your fighter, then your opponent, from the full 28-character grid.
-// Styled placeholder cards (portrait swatch + name + rating) until the
-// Phase 4 art pass adds real character portraits.
+// Pick your fighter, then your opponent, from the full roster grid.
 export class SelectScene extends Phaser.Scene {
   constructor() {
     super('Select')
@@ -69,17 +67,25 @@ export class SelectScene extends Phaser.Scene {
         shadow: { offsetX: 0, offsetY: 4, color: '#000000', blur: 10, fill: true },
       })
       .setOrigin(0.5)
+    const lightCount = CHARACTERS.filter((c) => c.side === 'light').length
+    const darkCount = CHARACTERS.length - lightCount
     this.subtitle = this.add
-      .text(W / 2, 64, 'LIGHT SIDE · 17        DARK SIDE · 11', {
+      .text(W / 2, 64, `LIGHT SIDE · ${lightCount}        DARK SIDE · ${darkCount}`, {
         fontFamily: 'Arial, sans-serif',
         fontSize: '12px',
         color: '#8a8ab0',
       })
       .setOrigin(0.5)
 
-    // 7 × 4 grid, light side first, dark side after — matching the spec table.
-    const cols = 7
-    const cardW = 126
+    // Light side first, dark side after — matching the spec table. Columns
+    // (and card scale) are derived from the roster size, not hardcoded, so
+    // the grid always fits 4 rows: at 28 characters this is the original
+    // 7-col, full-size layout unchanged; each time the roster grows past a
+    // multiple of 4, it adds a column and shrinks cards slightly rather
+    // than spilling a 5th row past the RANDOM button.
+    const cols = Math.ceil(CHARACTERS.length / 4)
+    const cardScale = Math.min(1, 7 / cols)
+    const cardW = 126 * cardScale
     const cardH = 96
     const startX = (W - cols * cardW) / 2 + cardW / 2
     const startY = 128
@@ -88,7 +94,7 @@ export class SelectScene extends Phaser.Scene {
     CHARACTERS.forEach((c, i) => {
       const x = startX + (i % cols) * cardW
       const y = startY + Math.floor(i / cols) * cardH
-      this.makeCard(c, x, y)
+      this.makeCard(c, x, y, cardScale)
       this.cards.push({ id: c.id, x, y })
     })
 
@@ -100,10 +106,10 @@ export class SelectScene extends Phaser.Scene {
     })
   }
 
-  makeCard(c, x, y) {
+  makeCard(c, x, y, scale = 1) {
     const light = c.side === 'light'
     const sideColor = light ? 0x4da6ff : 0xff5555
-    const container = this.add.container(x, y)
+    const container = this.add.container(x, y).setScale(scale)
 
     const card = this.add
       .rectangle(0, 0, 118, 88, light ? 0x101a2e : 0x1f1016)

@@ -3,10 +3,14 @@
 //
 // Both formats are a round-robin stage that feeds the existing 16-slot
 // knockout bracket in bracket.js:
-//   Group Play:  7 groups of 4 (all 28 characters), everyone plays 3 group
-//                matches; top 2 per group + the 2 best third-places = 16.
-//   League:      2 divisions of 14, single round-robin (13 matchdays);
+//   Group Play:  7 groups (4 apiece at today's 30-character roster),
+//                everyone plays a full round-robin within their group; top
+//                2 per group + the 2 best third-places = 16.
+//   League:      2 divisions (14 apiece today), single round-robin;
 //                top 8 per division = 16.
+// Pool sizes are derived from the roster size (see evenPoolSize below), not
+// hardcoded — the roster has grown since this was first built and will
+// keep growing.
 // Once the stage completes, the state gains the same seeds/rounds fields a
 // knockout tournament has and bracket.js takes over unchanged.
 
@@ -56,13 +60,39 @@ function pairUp(a, b) {
 // TOURNAMENT CREATION
 // ============================================================================
 
+// The largest EVEN pool size that fits `poolCount` equal pools inside
+// `total` characters. Even, so makeFixtures' circle method (built for even
+// n) never needs a bye round. When the roster doesn't divide evenly, a
+// handful of characters simply sit out that draw — the same spirit as
+// Knockout's own "16 random of 28" draw (bracket.js createTournament), not
+// a new compromise. At today's 30-character roster this still yields
+// exactly 4/pool (Group) and 14/division (League), unchanged from Phase 7's
+// original 28-character design.
+export function evenPoolSize(total, poolCount) {
+  let size = Math.floor(total / poolCount)
+  if (size % 2 !== 0) size -= 1
+  return Math.max(size, 2)
+}
+
 function createRRTournament(format, poolSize, poolNames, playerId, difficultyId, rng) {
   const player = CHARACTERS.find((c) => c.id === playerId)
   if (!player) throw new Error(`Unknown player character: ${playerId}`)
 
-  const allIds = shuffle(CHARACTERS.map((c) => c.id), rng)
+  const poolCount = poolNames.length
+  const totalUsed = poolCount * poolSize
+
+  // Player is always in the draw; the rest are drawn at random from
+  // everyone else (same pattern as bracket.js's createTournament) — this
+  // guarantees the player's own inclusion even when totalUsed is smaller
+  // than the full roster.
+  const others = shuffle(
+    CHARACTERS.filter((c) => c.id !== playerId).map((c) => c.id),
+    rng,
+  ).slice(0, totalUsed - 1)
+  const allIds = shuffle([playerId, ...others], rng)
+
   const pools = []
-  for (let p = 0; p < allIds.length / poolSize; p++) {
+  for (let p = 0; p < poolCount; p++) {
     const members = allIds.slice(p * poolSize, (p + 1) * poolSize)
     pools.push({ name: poolNames[p], members, fixtures: makeFixtures(members) })
   }
@@ -95,14 +125,16 @@ function createRRTournament(format, poolSize, poolNames, playerId, difficultyId,
   }
 }
 
-// Group Play: 7 groups of 4 covering all 28 characters.
+// Group Play: 7 groups, sized as evenly as the current roster allows.
 export function createGroupTournament(playerId, difficultyId, rng = Math.random) {
-  return createRRTournament('group', 4, GROUP_NAMES, playerId, difficultyId, rng)
+  const poolSize = evenPoolSize(CHARACTERS.length, GROUP_NAMES.length)
+  return createRRTournament('group', poolSize, GROUP_NAMES, playerId, difficultyId, rng)
 }
 
-// League: 2 divisions of 14 covering all 28 characters.
+// League: 2 divisions, sized as evenly as the current roster allows.
 export function createLeagueTournament(playerId, difficultyId, rng = Math.random) {
-  return createRRTournament('league', 14, ['Division 1', 'Division 2'], playerId, difficultyId, rng)
+  const poolSize = evenPoolSize(CHARACTERS.length, 2)
+  return createRRTournament('league', poolSize, ['Division 1', 'Division 2'], playerId, difficultyId, rng)
 }
 
 // ============================================================================

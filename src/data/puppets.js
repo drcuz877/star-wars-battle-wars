@@ -8,7 +8,9 @@
 //
 // Colors are hex (0xRRGGBB) — as tweakable as stats. Part `type` picks a
 // painter from src/art/puppet.js:
-//   head.type    'human' | 'wookiee' | 'mandoHelmet' | 'vaderHelmet'
+//   head.type    'human' | 'wookiee' | 'mandoHelmet' | 'vaderHelmet' |
+//                'battleDroid' | 'protocolDroid' (+ a few one-off types —
+//                see src/art/puppet.js's HEADS registry for the full list)
 //   torso.type   'tunic' | 'vest' | 'mandoArmor' | 'furry' | 'vaderArmor'
 //   arm.type     'sleeve' (default) | 'fur'
 //   leg.type     'pants' (default) | 'fur'
@@ -286,5 +288,25 @@ export const PUPPETS = {
     leg: { cloth: 0x191922, boot: 0x101018 },
     cape: { color: 0x1d1d28 },
     weapon: { hilt: 0x565c68 },
+  },
+
+  // Roger — B1 battle droid: tan plating, orange photoreceptor, a
+  // Mandalorian-style plated torso recolored droid-tan (no skin anywhere).
+  roger: {
+    head: { type: 'battleDroid', shell: 0xc9c0a0, eye: 0xe86a2a, shade: 0x8a8270 },
+    torso: { type: 'mandoArmor', suit: 0xb8ae90, plate: 0x9a9078, belt: 0x6a6350, box: 0x8a8270 },
+    arm: { cloth: 0xb8ae90, hand: 0x9a9078 },
+    leg: { cloth: 0x9a9078, boot: 0x6a6350 },
+    weapon: { type: 'pistol', body: 0x4a4638, grip: 0x3a3628, trim: 0xc9c0a0 },
+  },
+
+  // C3PO — gold protocol droid: paneled gold plating (mandoArmor recolored,
+  // same trick as Roger), unarmed. No skin tone anywhere on the puppet.
+  c3po: {
+    head: { type: 'protocolDroid', plate: 0xc9a227, seam: 0x7a5e12, lens: 0x3a2c08 },
+    torso: { type: 'mandoArmor', suit: 0xc9a227, plate: 0xb8860b, belt: 0x7a5e12, box: 0x8a6e18 },
+    arm: { cloth: 0xc9a227, hand: 0xb8860b },
+    leg: { cloth: 0xb8860b, boot: 0x7a5e12 },
+    weapon: { type: 'fists' },
   },
 }

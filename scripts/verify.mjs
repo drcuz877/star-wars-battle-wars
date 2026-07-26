@@ -22,6 +22,7 @@ import { loadTournament, saveTournament, clearTournament, normalizeTournament } 
 import {
   createGroupTournament,
   createLeagueTournament,
+  evenPoolSize,
   matchdayCount,
   inRoundRobin,
   playerPool,
@@ -194,17 +195,21 @@ const pairsMeetOnce = (pool) => {
   const rng = seededRng(1042)
   const state = createGroupTournament('luke', 'knight', rng)
   const allMembers = state.rr.pools.flatMap((p) => p.members)
+  // Pool size is derived from the current roster (evenPoolSize), not
+  // hardcoded — this assertion stays correct as the roster grows.
+  const expectedPoolSize = evenPoolSize(CHARACTERS.length, 7)
   check(
-    'group: 7 pools of 4 covering all 28 exactly once',
+    `group: 7 pools of ${expectedPoolSize} (roster ${CHARACTERS.length}), no repeats, player included`,
     state.rr.pools.length === 7 &&
-      state.rr.pools.every((p) => p.members.length === 4) &&
-      new Set(allMembers).size === 28,
+      state.rr.pools.every((p) => p.members.length === expectedPoolSize) &&
+      new Set(allMembers).size === 7 * expectedPoolSize &&
+      allMembers.includes('luke'),
   )
   check(
-    'group: player pool located, 3 matchdays of 2 matches',
+    'group: player pool located, matchdays = poolSize - 1, 2 matches/day',
     playerPool(state).members.includes('luke') &&
-      matchdayCount(state) === 3 &&
-      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === 2)),
+      matchdayCount(state) === expectedPoolSize - 1 &&
+      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === expectedPoolSize / 2)),
   )
   check('group: every pool pair meets exactly once', state.rr.pools.every(pairsMeetOnce))
   check(
@@ -219,12 +224,13 @@ const pairsMeetOnce = (pool) => {
 {
   const rng = seededRng(2042)
   const state = createLeagueTournament('vader', 'master', rng)
+  const expectedDivSize = evenPoolSize(CHARACTERS.length, 2)
   check(
-    'league: 2 divisions of 14, 13 matchdays of 7 matches',
+    `league: 2 divisions of ${expectedDivSize} (roster ${CHARACTERS.length})`,
     state.rr.pools.length === 2 &&
-      state.rr.pools.every((p) => p.members.length === 14) &&
-      matchdayCount(state) === 13 &&
-      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === 7)),
+      state.rr.pools.every((p) => p.members.length === expectedDivSize) &&
+      matchdayCount(state) === expectedDivSize - 1 &&
+      state.rr.pools.every((p) => p.fixtures.every((d) => d.length === expectedDivSize / 2)),
   )
   check('league: every division pair meets exactly once', state.rr.pools.every(pairsMeetOnce))
 }
@@ -240,20 +246,24 @@ const pairsMeetOnce = (pool) => {
   )
 }
 
-// Test 10: Group sweep (3-0) → guaranteed group winner → knockout stage.
+// Test 10: Group sweep → guaranteed group winner → knockout stage.
+// Day count, win/points targets, and per-pool match totals are all derived
+// from the actual pool size (evenPoolSize), not hardcoded — stays correct
+// as the roster grows past today's 30 characters.
 {
   const rng = seededRng(4042)
   const state = createGroupTournament('luke', 'knight', rng)
-  for (let d = 0; d < 3; d++) recordRRResult(state, true, rng)
+  const days = matchdayCount(state)
+  for (let d = 0; d < days; d++) recordRRResult(state, true, rng)
 
   const table = poolStandings(state, state.rr.playerPool)
   check(
-    'group sweep: player tops the group table at 3-0 (9 pts)',
-    table[0].id === 'luke' && table[0].wins === 3 && table[0].pts === 9,
+    `group sweep: player tops the group table at ${days}-0 (${days * 3} pts)`,
+    table[0].id === 'luke' && table[0].wins === days && table[0].pts === days * 3,
     JSON.stringify(table.map((r) => `${r.id}:${r.wins}`)),
   )
   check(
-    'group sweep: all pool matches resolved (6 per group)',
+    'group sweep: all pool matches resolved',
     state.rr.pools.every((p) => p.fixtures.flat().every((fx) => fx.played)),
   )
   check(
@@ -282,7 +292,7 @@ const pairsMeetOnce = (pool) => {
 {
   const rng = seededRng(5042)
   const state = createGroupTournament('padme', 'initiate', rng)
-  for (let d = 0; d < 3; d++) recordRRResult(state, false, rng)
+  for (let d = 0; d < matchdayCount(state); d++) recordRRResult(state, false, rng)
   check(
     'group 0-3: eliminated at the pool stage, not seeded into the knockout',
     state.status === 'eliminated' && state.rrEliminated === true && !state.seeds.includes('padme'),
@@ -296,15 +306,17 @@ const pairsMeetOnce = (pool) => {
   )
 }
 
-// Test 12: League sweep (13-0) → division winner → knockout; wipeout → out.
+// Test 12: League sweep → division winner → knockout; wipeout → out.
+// Day count derived from the actual division size, same reasoning as Test 10.
 {
   const rng = seededRng(6042)
   const state = createLeagueTournament('yoda', 'master', rng)
-  for (let d = 0; d < 13; d++) recordRRResult(state, true, rng)
+  const leagueDays = matchdayCount(state)
+  for (let d = 0; d < leagueDays; d++) recordRRResult(state, true, rng)
   const table = poolStandings(state, state.rr.playerPool)
   check(
-    'league sweep: player tops the division at 13-0 and reaches the knockout',
-    table[0].id === 'yoda' && table[0].wins === 13 && state.stage === 'knockout' && state.status === 'active',
+    `league sweep: player tops the division at ${leagueDays}-0 and reaches the knockout`,
+    table[0].id === 'yoda' && table[0].wins === leagueDays && state.stage === 'knockout' && state.status === 'active',
   )
   check(
     'league sweep: division winners land in opposite bracket halves',
@@ -317,7 +329,7 @@ const pairsMeetOnce = (pool) => {
 
   const rng2 = seededRng(7042)
   const lost = createLeagueTournament('padme', 'initiate', rng2)
-  for (let d = 0; d < 13; d++) recordRRResult(lost, false, rng2)
+  for (let d = 0; d < matchdayCount(lost); d++) recordRRResult(lost, false, rng2)
   check(
     'league 0-13: finishes last, eliminated without a knockout berth',
     lost.status === 'eliminated' && lost.rrEliminated === true && !lost.seeds.includes(lost.playerId),
@@ -436,7 +448,11 @@ try {
 
   // --- Character select: pick Luke, then Vader, via real clicks on cards.
   const cardCount = await page.evaluate(() => window.game.scene.keys.Select.cards.length)
-  check('select screen shows all 28 characters', cardCount === 28, `${cardCount} cards`)
+  check(
+    `select screen shows all ${CHARACTERS.length} characters`,
+    cardCount === CHARACTERS.length,
+    `${cardCount} cards`,
+  )
 
   const clickCard = async (id) => {
     const pos = await page.evaluate(

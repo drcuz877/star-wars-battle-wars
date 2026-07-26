@@ -218,6 +218,35 @@ const HEADS = {
     p.rect(12.5, 18, 1, 4.4, o.grille)
     p.rect(14, 17.6, 1, 4.2, o.grille)
   },
+
+  // B1 battle droid (Roger): flat wide plate head, hooked chin, single
+  // horizontal photoreceptor band — no visor detail, no mouth, on purpose.
+  battleDroid(p, o) {
+    p.rect(10, 19, 6, 4, o.shell) // thin neck
+    p.round(2.5, 5.5, 21, 13, 5, o.shell) // flat wide head plate
+    p.poly([[10, 17.5], [16, 17.5], [13, 23]], o.shell) // hooked chin
+    p.rect(5, 10.5, 16, 2.6, o.eye) // photoreceptor band
+    p.rect(6, 6.5, 2, 5, o.shade, 0.5) // side plate seams
+    p.rect(18, 6.5, 2, 5, o.shade, 0.5)
+  },
+
+  // Protocol droid (C3PO): rounder gold-plated head, seam line, two glowing
+  // lens eyes, small grille mouth-plate — a "face" built from panel lines,
+  // no skin.
+  protocolDroid(p, o) {
+    p.rect(10, 19, 6, 4, o.plate) // neck
+    p.round(4.5, 3.5, 17, 17, 6, o.plate) // rounded head shell
+    p.rect(6.5, 6, 2, 13, o.seam, 0.55) // ear-panel seams
+    p.rect(17.5, 6, 2, 13, o.seam, 0.55)
+    p.rect(12.4, 5, 1.2, 15, o.seam, 0.4) // center seam
+    p.ellipse(9.6, 11.5, 5, 5, o.lens) // eye lenses
+    p.ellipse(16.4, 11.5, 5, 5, o.lens)
+    p.ellipse(9.6, 11.5, 2.4, 2.4, 0xfff6c8, 0.85) // eye glow
+    p.ellipse(16.4, 11.5, 2.4, 2.4, 0xfff6c8, 0.85)
+    p.rect(10, 17.6, 1, 3.6, o.seam) // mouth grille bars
+    p.rect(12.5, 18, 1, 3.8, o.seam)
+    p.rect(15, 17.6, 1, 3.6, o.seam)
+  },
 }
 
 const TORSOS = {

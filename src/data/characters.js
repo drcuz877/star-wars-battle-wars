@@ -320,6 +320,33 @@ export const CHARACTERS = [
     special: { name: 'Quick Draw', template: 'grip', scales: 'str', damage: 5, stunMs: 600, range: 410, followUpBolt: true },
     color: 0x4a8a9a,
   },
+  {
+    // Separatist B1 battle droid (2026-07-25, Drew's son's roster request —
+    // added to help offset light-side-heavy 17/11 balance). Individually
+    // mediocre by design (the joke is there are thousands of him), not the
+    // roster's floor — that's C3PO, below.
+    id: 'roger',
+    name: 'Roger',
+    side: 'dark',
+    archetype: 'blaster',
+    stats: { str: 13, spd: 14, frc: 0, def: 11 },
+    special: { name: 'Roger Roger', template: 'projectile', scales: 'str', count: 4, damage: 3.5 },
+    color: 0xc9c0a0,
+  },
+  {
+    // C3PO (2026-07-25, Drew's son's request) — canonically never fights, so
+    // he's a deliberate joke-tier pick: the roster's lowest OVR by a wide
+    // margin, on purpose, not a balance miss. Unarmed (brawler, weapon
+    // 'fists' in puppets.js) since he's never held a weapon in canon; his
+    // "special" is comic relief, not a real damage tool.
+    id: 'c3po',
+    name: 'C-3PO',
+    side: 'light',
+    archetype: 'brawler',
+    stats: { str: 4, spd: 8, frc: 0, def: 10 },
+    special: { name: 'Human-Cyborg Relations', template: 'grip', scales: 'str', damage: 2, stunMs: 500, range: 380 },
+    color: 0xc9a227,
+  },
 ]
 
 // Overall rating = the four stats added together (0–100).
